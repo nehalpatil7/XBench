@@ -363,8 +363,8 @@ if __name__ == '__main__':
     subParser = parser.add_subparsers(title='commands', dest='command')
     dataGenerator = subParser.add_parser('generate', add_help=False, description='Synthetic data generator for benchmarking suite')
     dataGenerator.add_argument('-t', '--data-type', type=str, required=True, help='Type of data to be generated (numeric or hash (str)', choices=['numeric', 'hash'])
-    dataGenerator.add_argument('-s', '--start-time', type=int, required=True, help='Start time in Epoch time format')
-    dataGenerator.add_argument('-e', '--end-time', type=int, required=True, help='End time in Epoch time format')
+    dataGenerator.add_argument('-s', '--start-time', type=int, required=True, help='Start time in Epoch time format (inclusive)')
+    dataGenerator.add_argument('-e', '--end-time', type=int, required=True, help='End time in Epoch time format (inclusive)')
     dataGenerator.add_argument('-c', '--column-count', type=int, required=True, help='Number of columns')
     dataGenerator.add_argument('-o', '--outfile_name', type=str, required=True, help='Name of the generated Parquet data file (With .parquet extension)')
 
