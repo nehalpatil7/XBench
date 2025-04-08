@@ -102,8 +102,7 @@ class ParquetOPS:
                 temp.append(timeIdx)
 
                 # Create hash data for each column
-                for i in range(columnCount):
-                    temp.append(random.uniform(-9223372036854775808, 9223372036854775807))
+                temp += np.random.uniform(low=-999_999, high=999_999, size=columnCount).tolist()
 
                 # Append to master list
                 data.append(temp)

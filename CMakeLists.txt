@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 # Project
-project(benchmarkClient)
+project(XBench)
 
 # Optimization flag
 if(NOT CMAKE_BUILD_TYPE)
