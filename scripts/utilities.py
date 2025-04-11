@@ -374,7 +374,3 @@ def checkTmuxJobIsDone(connectionGroup, timeout=300):  # 5 minute timeout
             time.sleep(10)
             # Don't break on error, keep trying until timeout
             continue
-
-
-if __name__ == "__main__":
-    unaryPlots('INSERT_UNARY_RAND', 'TimescaleDB', [1], ['64.131.114.158'], logScale=True)
