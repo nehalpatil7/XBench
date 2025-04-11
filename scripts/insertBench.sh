@@ -31,5 +31,5 @@ cp -r 10Y_32-Cols_Experiments/$WORKLOAD\_INSERT_$PATTERN/$WORKLOAD\_INSERT_$PATT
 # Init tmux session
 tmux new-session -d -s XStore -n Client
 
-# Dispatch workload  
+# Dispatch workload
 tmux send-keys -t "Client" "./benchmarkClient insertBench -i $SERVER_ADDR -p $SERVER_PORT -d $DB_NAME -t $THREAD_COUNT -e $EXPERIMENT_TYPE -n $N_ITER -b $BATCH_ITER -ia $INVOKE_AT && tmux kill-server" C-m

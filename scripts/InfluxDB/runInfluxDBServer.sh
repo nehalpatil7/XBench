@@ -15,5 +15,5 @@ free > /dev/null && sync > /dev/null && sudo sh -c 'echo 3 > /proc/sys/vm/drop_c
 # Start InfluxDB
 sudo service influxdb start && sudo service influxdb restart
 
-# Delay to make sure server has enough time to be up 
+# Delay to make sure server has enough time to be up
 sleep 10

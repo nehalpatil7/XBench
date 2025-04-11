@@ -40,7 +40,11 @@ private:
     static std::vector<double> rangeInsert_singleThread(std::string SERVER_ADDR, std::string SERVER_PORT, int N_ITERATION, std::vector<std::vector<std::any>> *insertData, bool isDebug);
     static std::vector<double> batchInsert_singleThread(std::string SERVER_ADDR, std::string SERVER_PORT, int N_ITERATION, std::vector<std::vector<std::any>> *insertData, bool isDebug);
 
+    // Helper methods
     static void createDB(std::string SERVER_ADDR, std::string SERVER_PORT, std::string dbName, std::vector<std::any> *singleRowData);
+    static std::string getConnectionString(std::string SERVER_ADDR, std::string SERVER_PORT, std::string dbName = "");
+    static std::string prepareInsertStatement(int numFields);
+    static std::string getTimeResolution(unsigned long int timestamp);
 };
 
 #endif //XSTORE_TIMESCALEDB_ADAPTER_H

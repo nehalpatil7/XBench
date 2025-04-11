@@ -27,11 +27,11 @@ elif [ "$DB_NAME" == "MongoDB" ]; then
 
     # Fetch experiment data from ObjectStore
     tmux send-keys -t "RestoreDB" "wget -qO- ${defaultURL} | tar xvSO --zstd | mongorestore --host 0.0.0.0 --port 9491 --nsInclude=BENCH_DB.BENCH_DB --archive --drop && tmux kill-server" C-m
-    
+
 elif [ "$DB_NAME" == "InfluxDB" ]; then
     # Purge existing dataStore
     influx -port 9492 -execute "DROP DATABASE BENCH_DB"
-    
+
     # Fetch experiment data from ObjectStore
     tmux send-keys -t "RestoreDB" "wget -qO- ${defaultURL} | tar xvS --zstd && influxd restore -portable InfluxDB_BENCH_DB && sudo rm -r InfluxDB_BENCH_DB && tmux kill-server" C-m
 fi

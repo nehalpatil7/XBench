@@ -11,30 +11,30 @@ marker = itertools.cycle((">", "o", "s", "^", "v", "p", "P", "d", "*"))
 def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNodes, nIter, batchIter, serverGroup, serverWorkingDir, user="cc"):
     # Running single client tests first (Thread: 1, 2, 4)
     runWorkload_singleClient(EXPERIMENT_TYPE, [1, 2, 4], serverNode, serverPort, dbName, clientNodes[0], nIter, batchIter, serverGroup, serverWorkingDir, user)
-    
+
     WORKLOAD_TYPE = EXPERIMENT_TYPE.split("_")[0]
     EXPERIMENT_TYPE = EXPERIMENT_TYPE[len(WORKLOAD_TYPE) + 1:]
-    
+
     for numThread in targetThreads:
         totalClients = numThread * len(clientNodes)
-        
+
         # Skip if tests covered by singleClient
         if totalClients < 8:
             continue
-        
+
         # Start server
-        serverGroup.put(f"../scripts/{dbName}/run{dbName}Server.sh")
-        
-        if WORKLOAD_TYPE == "INSERT": 
-            serverGroup.run(f"bash run{dbName}Server.sh true {serverWorkingDir}", hide=True)
+        serverGroup.put(f"../../scripts/{dbName}/run{dbName}Server.sh")
+
+        if WORKLOAD_TYPE == "INSERT":
+            serverGroup.run(f"bash run{dbName}Server.sh true {serverWorkingDir}")
         elif WORKLOAD_TYPE == "QUERY":
-            serverGroup.run(f"bash run{dbName}Server.sh false {serverWorkingDir}", hide=True)
+            serverGroup.run(f"bash run{dbName}Server.sh false {serverWorkingDir}")
         serverGroup.close()
 
         # Start monitoring system stats
-        serverGroup.put(f"../scripts/sysMonitor.sh")
-        serverGroup.run(f"bash sysMonitor.sh 50 {dbName}", hide=True)
-        
+        serverGroup.put(f"../../scripts/sysMonitor.sh")
+        serverGroup.run(f"bash sysMonitor.sh 50 {dbName}")
+
         # Schedule workload to be dispatch 2 min from now
         epochTime = int(time.time()) + (60 * 2)
         print(f"[Benchmark: {totalClients}] - Schedule workload on {epochTime}")
@@ -42,26 +42,26 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
         for idx, ip in enumerate(clientNodes):
             # SSH to client
             conn = Connection(ip, user=user)
-            
+
             if WORKLOAD_TYPE == "INSERT":
-                conn.put(f"../scripts/insertBench.sh")
+                conn.put(f"../../scripts/insertBench.sh")
                 conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}")
             elif WORKLOAD_TYPE == "QUERY":
-                conn.put(f"../scripts/queryBench.sh")
+                conn.put(f"../../scripts/queryBench.sh")
                 conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}")
             conn.close()
             print(f"[Benchmark: {totalClients}] [Client: {ip}] - Time now: {int(time.time())} | Delta: {epochTime - int(time.time())}")
-        
+
         # Poll until and add 1 min delay buffer for workload to finish
         poller(epochTime)
         time.sleep(60)
-        
+
         # Checking every 10s for result file
         for idx, ip in enumerate(clientNodes):
             while True:
                 try:
                     conn = Connection(ip, user=user)
-                    jobStatus = conn.run("tmux ls", hide=True)
+                    jobStatus = conn.run("tmux ls")
                     conn.close()
                     time.sleep(10)
                 except:
@@ -69,8 +69,8 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
                     break
 
         # Kill server monitoring
-        serverGroup.run("pkill sar &", hide=True)
-        
+        serverGroup.run("pkill sar &")
+
         # Fetch bench results to this notebook
         #  Get till die since we know data is there from prev. cmd
         while True:
@@ -84,16 +84,16 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
                     os.makedirs(currPath, exist_ok=True)
 
                     # Fetch remote bench files to retrieve
-                    csvFiles = conn.run("ls *.csv", hide=True).stdout.split("\n")
+                    csvFiles = conn.run("ls *.csv").stdout.split("\n")
 
                     # Download bench results
                     csvCount = 0
                     for file in csvFiles:
-                        # Filter for .csv only 
+                        # Filter for .csv only
                         if not file.endswith(".csv"):
                             continue
 
-                        # Obtain & Organize 
+                        # Obtain & Organize
                         conn.get(file)
                         conn.close()
                         csvCount += 1
@@ -107,21 +107,21 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
 
                     if not hasSysStats:
                         # Fetch remote sysstat files to retrieve
-                        txtFiles = serverGroup[0].run("ls *.txt", hide=True).stdout.split("\n")
-    
+                        txtFiles = serverGroup[0].run("ls *.txt").stdout.split("\n")
+
                         # Download sysstat files
                         for file in txtFiles:
-                            # Filter for .txt only 
+                            # Filter for .txt only
                             if not file.endswith(".txt"):
                                 continue
-                
-                            # Obtain & Organize 
+
+                            # Obtain & Organize
                             serverGroup[0].get(file)
                             serverGroup[0].close()
-                
+
                             if os.path.isfile(f"{currPath}{file}"):
                                 os.remove(f"{currPath}{file}")
-                
+
                             shutil.move(file, currPath)
                             time.sleep(5)
                         print(f"[Benchmark: {totalClients}] [Server] - Downloaded system stats files")
@@ -134,46 +134,46 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
 def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNode, nIter, batchIter, serverGroup, serverWorkingDir, user="cc"):
     WORKLOAD_TYPE = EXPERIMENT_TYPE.split("_")[0]
     EXPERIMENT_TYPE = EXPERIMENT_TYPE[len(WORKLOAD_TYPE) + 1:]
-    
+
     for numThread in targetThreads:
         # Start server
-        serverGroup.put(f"../scripts/{dbName}/run{dbName}Server.sh")
-        
-        if WORKLOAD_TYPE == "INSERT": 
-            serverGroup.run(f"bash run{dbName}Server.sh true {serverWorkingDir}", hide=True)
+        serverGroup.put(f"../../scripts/{dbName}/run{dbName}Server.sh")
+
+        if WORKLOAD_TYPE == "INSERT":
+            serverGroup.run(f"bash run{dbName}Server.sh true {serverWorkingDir}")
         elif WORKLOAD_TYPE == "QUERY":
-            serverGroup.run(f"bash run{dbName}Server.sh false {serverWorkingDir}", hide=True)
+            serverGroup.run(f"bash run{dbName}Server.sh false {serverWorkingDir}")
         serverGroup.close()
 
         # Start monitoring system stats
-        serverGroup.put(f"../scripts/sysMonitor.sh")
-        serverGroup.run(f"bash sysMonitor.sh 50 {dbName}", hide=True)
-        
+        serverGroup.put(f"../../scripts/sysMonitor.sh")
+        serverGroup.run(f"bash sysMonitor.sh 50 {dbName}")
+
         # Schedule workload to be dispatch 1 min from now
         epochTime = int(time.time()) + 60
         print(f"[Benchmark: {numThread}] - Schedule workload on {epochTime}")
 
         # SSH to client
         conn = Connection(clientNode, user=user)
-            
+
         if WORKLOAD_TYPE == "INSERT":
-            conn.put(f"../scripts/insertBench.sh")
+            conn.put(f"../../scripts/insertBench.sh")
             conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}")
         elif WORKLOAD_TYPE == "QUERY":
-            conn.put(f"../scripts/queryBench.sh")
+            conn.put(f"../../scripts/queryBench.sh")
             conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}")
         conn.close()
         print(f"[Benchmark: {numThread}] [Client: {clientNode}] - Time now: {int(time.time())} | Delta: {epochTime - int(time.time())}")
-        
+
         # Poll until and add 1 min delay buffer for workload to finish
         poller(epochTime)
         time.sleep(60)
-        
+
         # Checking every 10s for result file
         while True:
             try:
-                conn = Connection(ip, user=user)
-                jobStatus = conn.run("tmux ls", hide=True)
+                conn = Connection(clientNode, user=user)
+                jobStatus = conn.run("tmux ls")
                 conn.close()
                 time.sleep(10)
             except:
@@ -181,55 +181,55 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
                 break
 
         # Kill server monitoring
-        serverGroup.run("pkill sar &", hide=True)
-        
+        serverGroup.run("pkill sar &")
+
         # Fetch bench results to this notebook
         while True:
             currPath = f"{dbName.upper()}_{WORKLOAD_TYPE}_{EXPERIMENT_TYPE}/Client-{numThread}/Node-0/"
             conn = Connection(clientNode, user=user)
-            try:      
+            try:
                 # Create dir if not exist
                 os.makedirs(currPath, exist_ok=True)
-        
+
                 # Fetch remote bench files to retrieve
-                csvFiles = conn.run("ls *.csv", hide=True).stdout.split("\n")
-        
+                csvFiles = conn.run("ls *.csv").stdout.split("\n")
+
                 # Download bench results
                 csvCount = 0
                 for file in csvFiles:
-                    # Filter for .csv only 
+                    # Filter for .csv only
                     if not file.endswith(".csv"):
                         continue
-        
-                    # Obtain & Organize 
+
+                    # Obtain & Organize
                     conn.get(file)
                     conn.close()
                     csvCount += 1
-        
+
                     if os.path.isfile(f"{currPath}{file}"):
                         os.remove(f"{currPath}{file}")
-        
+
                     shutil.move(file, currPath)
                     time.sleep(5)
                 print(f"[Benchmark: {numThread}] [Client: {clientNode}] - Downloaded {csvCount} result files")
                 time.sleep(5)
 
                 # Fetch remote sysstat files to retrieve
-                txtFiles = serverGroup[0].run("ls *.txt", hide=True).stdout.split("\n")
-                
+                txtFiles = serverGroup[0].run("ls *.txt").stdout.split("\n")
+
                 # Download sysstat files
                 for file in txtFiles:
-                    # Filter for .txt only 
+                    # Filter for .txt only
                     if not file.endswith(".txt"):
                         continue
-        
-                    # Obtain & Organize 
+
+                    # Obtain & Organize
                     serverGroup[0].get(file)
                     serverGroup[0].close()
-        
+
                     if os.path.isfile(f"{currPath}{file}"):
                         os.remove(f"{currPath}{file}")
-        
+
                     shutil.move(file, currPath)
                     time.sleep(5)
                 print(f"[Benchmark: {numThread}] [Server] - Downloaded system stats files")
@@ -237,23 +237,23 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
             except:
                 time.sleep(5)
                 pass
-            
+
 def unaryPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, logScale=False):
     numClients = [i * len(clientNodes) for i in targetThreads]
     clientDir = sorted([i for i in os.listdir(f"{DB_NAME.upper()}_{WORKLOAD_TYPE}")], key=lambda x:int(x.split("-")[-1]))
     benchData = {}
-    
+
     for idx, i in enumerate(clientDir):
         if int(i.split('-')[1]) > 64:
             continue
         currCSVdata = []
         currClientDir = [cDir for cDir in os.listdir(f"{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}")]
-        
+
         for nodeIdx, item in enumerate(currClientDir):
             myDir = f"{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}/{item}"
             csvFiles = os.listdir(myDir)
             csvFiles = [csvFile for csvFile in csvFiles if csvFile.endswith(".csv")]
-            
+
             for csvFile in csvFiles:
                 df = pd.read_csv(f"{myDir}/{csvFile}")
                 currCSVdata.append(df["Time taken (ms)"].tolist())
@@ -280,7 +280,7 @@ def unaryPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, logScale=Fals
 
     if logScale:
         ax.set_yscale('log')
-        
+
     ax.yaxis.set_major_formatter(ticker.FormatStrFormatter("%.2f"))
     ax.yaxis.set_minor_formatter(ticker.FormatStrFormatter("%.2f"))
     # ax.yaxis.set_minor_locator(ticker.NullLocator())  # no minor ticks
@@ -300,7 +300,7 @@ def batchPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, batchSize=100
             continue
         currCSVdata = []
         currClientDir = [cDir for cDir in os.listdir(f"{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}")]
-        
+
         for nodeIdx, item in enumerate(currClientDir):
             myDir = f"{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}/{item}"
             csvFiles = os.listdir(myDir)
@@ -310,13 +310,13 @@ def batchPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, batchSize=100
                 df = pd.read_csv(f'{myDir}/{csvFile}')
                 currCSVdata.append(df['Time taken (ms)'].tolist())
         df = pd.DataFrame(zip(*currCSVdata))
-        
+
         # If has value 0 -> Test must be partially/fully timed-out
         if (df.values == 0).any():
             df['Mean'] = 0
             benchData[i] = df['Mean'].tolist()
             continue
-        
+
         # Otherwise, compute avg. time taken across all clients
         df['Mean'] = df.mean(axis=1)
         benchData[i] = df['Mean'].tolist()
@@ -359,12 +359,12 @@ def batchPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, batchSize=100
 def poller(epochTime):
     while time.time() <= epochTime:
         time.sleep(1)
-        
+
 def checkTmuxJobIsDone(connectionGroup):
     # Keep checking if job is done running in tmux window
     while True:
         try:
-            jobStatus = connectionGroup.run("tmux ls", hide=True)
+            jobStatus = connectionGroup.run("tmux ls")
             connectionGroup.close()
             time.sleep(10)
         except:

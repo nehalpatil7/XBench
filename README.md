@@ -3,7 +3,7 @@
 # Description
 Source code for project XBench and its related work.
 
-**Illinois Institute of Technology**  
+**Illinois Institute of Technology**
 **Data-Intensive Distributed Systems Laboratory**
 
 Author: Lan Nguyen (Lnguyen18@hawk.iit.edu)\

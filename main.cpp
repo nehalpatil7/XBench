@@ -36,7 +36,7 @@ int main(int argc, char const *argv[])
     queryBench.add_argument("-d", "--db_name").required()
             .help("Target DB Name")
             .default_value("XSTORE").nargs(1)
-            .choices("XSTORE", "MONGODB", "INFLUXDB");
+            .choices("XSTORE", "MONGODB", "INFLUXDB", "TIMESCALEDB");
 
     //  Number of Threads
     queryBench.add_argument("-t", "--thread_count").required()
@@ -88,7 +88,7 @@ int main(int argc, char const *argv[])
     insertBench.add_argument("-d", "--db_name").required()
             .help("Target DB Name")
             .default_value("XSTORE").nargs(1)
-            .choices("XSTORE", "MONGODB", "INFLUXDB");
+            .choices("XSTORE", "MONGODB", "INFLUXDB", "TIMESCALEDB");
 
     //  Number of Threads
     insertBench.add_argument("-t", "--thread_count").required()
@@ -206,6 +206,9 @@ int main(int argc, char const *argv[])
             else if (TARGET_DB == "INFLUXDB") {
                 timeCost = InfluxDB_Adapter::unaryQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, N_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
+            else if (TARGET_DB == "TIMESCALEDB") {
+                timeCost = TimescaleDB_Adapter::unaryQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, N_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
         }
         else if (EXPERIMENT_TYPE == "UNARY_RAND") {
             spdlog::info("[UNARY QUERY]  Target DB: {}", TARGET_DB);
@@ -229,6 +232,9 @@ int main(int argc, char const *argv[])
             }
             else if (TARGET_DB == "INFLUXDB") {
                 timeCost = InfluxDB_Adapter::unaryQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, N_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
+            else if (TARGET_DB == "TIMESCALEDB") {
+                timeCost = TimescaleDB_Adapter::unaryQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, N_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
         }
         else if (EXPERIMENT_TYPE == "BATCH_SEQ") {
@@ -254,6 +260,8 @@ int main(int argc, char const *argv[])
             }
             else if (TARGET_DB == "INFLUXDB") {
                 timeCost = InfluxDB_Adapter::rangeQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }else if (TARGET_DB == "TIMESCALEDB") {
+                timeCost = TimescaleDB_Adapter::rangeQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
         }
         else if (EXPERIMENT_TYPE == "BATCH_RAND") {
@@ -340,6 +348,9 @@ int main(int argc, char const *argv[])
             else if (TARGET_DB == "INFLUXDB") {
                 timeCost = InfluxDB_Adapter::unaryInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, N_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
+            else if (TARGET_DB == "TIMESCALEDB") {
+                timeCost = TimescaleDB_Adapter::unaryInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
         }
         else if (EXPERIMENT_TYPE == "UNARY_RAND") {
             spdlog::info("[UNARY INSERT]  Target DB: {}", TARGET_DB);
@@ -365,6 +376,9 @@ int main(int argc, char const *argv[])
             }
             else if (TARGET_DB == "INFLUXDB") {
                 timeCost = InfluxDB_Adapter::unaryInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, N_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
+            else if (TARGET_DB == "TIMESCALEDB") {
+                timeCost = TimescaleDB_Adapter::unaryInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
         }
         else if (EXPERIMENT_TYPE == "BATCH_SEQ") {
@@ -393,6 +407,9 @@ int main(int argc, char const *argv[])
             else if (TARGET_DB == "INFLUXDB") {
                 timeCost = InfluxDB_Adapter::batchInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
+            else if (TARGET_DB == "TIMESCALEDB") {
+                timeCost = TimescaleDB_Adapter::batchInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
         }
         else if (EXPERIMENT_TYPE == "BATCH_RAND") {
             spdlog::info("[BATCH INSERT]        Target DB: {}", TARGET_DB);
@@ -419,6 +436,9 @@ int main(int argc, char const *argv[])
             }
             else if (TARGET_DB == "INFLUXDB") {
                 timeCost = InfluxDB_Adapter::batchInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
+            else if (TARGET_DB == "TIMESCALEDB") {
+                timeCost = TimescaleDB_Adapter::batchInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
         }
 
