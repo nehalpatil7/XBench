@@ -1,5 +1,12 @@
 # XBench - A distributed benchmarking framework for TSDB
 
+**Illinois Institute of Technology**\
+**Data-Intensive Distributed Systems Laboratory**
+
+Author: Lan Nguyen (Lnguyen18@hawk.iit.edu)\
+Co-author: Nehal Patil (npatil14@hawk.iit.edu)\
+Advisor: Ioan Raicu (iraicu@iit.edu)
+
 # Description
 Source code for project XBench and its related work.
 
@@ -16,12 +23,6 @@ Source code for project XBench and its related work.
 * [XStore API]&#40;https://gitlab.com/lvn2007/XStore/-/wikis/api&#41;
 * [Data Structure]&#40;https://gitlab.com/lvn2007/XStore/-/wikis/Data%20Structure&#41;
 
-**Illinois Institute of Technology**
-**Data-Intensive Distributed Systems Laboratory**
-
-Author: Lan Nguyen (Lnguyen18@hawk.iit.edu)\
-Co-author: Nehal Patil (npatil14@hawk.iit.edu)\
-Advisor: Ioan Raicu (iraicu@iit.edu)
 
 [//]: # (This work has been published to:)
 
