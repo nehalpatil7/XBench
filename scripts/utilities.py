@@ -58,17 +58,9 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
         poller(epochTime)
         time.sleep(60)
 
-        # Checking every 10s for result file
-        for idx, ip in enumerate(clientNodes):
-            while True:
-                try:
-                    conn = Connection(ip, user=user)
-                    jobStatus = conn.run("tmux ls")
-                    conn.close()
-                    time.sleep(10)
-                except:
-                    time.sleep(10)
-                    break
+        # Checking for job completion with timeout
+        if not checkTmuxJobIsDone(serverGroup):
+            print("Warning: Job may not have completed successfully")
 
         # Kill server monitoring
         serverGroup.run("pkill sar &")
@@ -173,16 +165,9 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
         poller(epochTime)
         time.sleep(60)
 
-        # Checking every 10s for result file
-        while True:
-            try:
-                conn = Connection(clientNode, user=user)
-                jobStatus = conn.run("tmux ls")
-                conn.close()
-                time.sleep(10)
-            except:
-                time.sleep(10)
-                break
+        # Checking for job completion with timeout
+        if not checkTmuxJobIsDone(serverGroup):
+            print("Warning: Job may not have completed successfully")
 
         # Kill server monitoring
         serverGroup.run("pkill sar &")
@@ -244,17 +229,17 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
 
 def unaryPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, logScale=False):
     numClients = [i * len(clientNodes) for i in targetThreads]
-    clientDir = sorted([i for i in os.listdir(f"{DB_NAME.upper()}_{WORKLOAD_TYPE}")], key=lambda x:int(x.split("-")[-1]))
+    clientDir = sorted([i for i in os.listdir(f"../Drivers/{DB_NAME}/{DB_NAME.upper()}_{WORKLOAD_TYPE}")], key=lambda x:int(x.split("-")[-1]))
     benchData = {}
 
     for idx, i in enumerate(clientDir):
         if int(i.split('-')[1]) > 64:
             continue
         currCSVdata = []
-        currClientDir = [cDir for cDir in os.listdir(f"{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}")]
+        currClientDir = [cDir for cDir in os.listdir(f"../Drivers/{DB_NAME}/{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}")]
 
         for nodeIdx, item in enumerate(currClientDir):
-            myDir = f"{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}/{item}"
+            myDir = f"../Drivers/{DB_NAME}/{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}/{item}"
             csvFiles = os.listdir(myDir)
             csvFiles = [csvFile for csvFile in csvFiles if csvFile.endswith(".csv")]
 
@@ -292,7 +277,7 @@ def unaryPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, logScale=Fals
     plt.legend(bbox_to_anchor=(0., -0.35, 1., 0.102), loc='lower center', mode='expand', ncols=3, borderaxespad=0, markerscale=3)
     plt.tight_layout(pad=0.15)
     plt.autoscale(axis='x')
-    plt.savefig(f"{DB_NAME}_{WORKLOAD_TYPE}.svg", format='svg')
+    plt.savefig(f"../Drivers/{DB_NAME}/{DB_NAME.upper()}_{WORKLOAD_TYPE}.svg", format='svg')
 
 def batchPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, batchSize=1000):
     numClients = [i * len(clientNodes) for i in targetThreads]
@@ -364,13 +349,32 @@ def poller(epochTime):
     while time.time() <= epochTime:
         time.sleep(1)
 
-def checkTmuxJobIsDone(connectionGroup):
-    # Keep checking if job is done running in tmux window
+def checkTmuxJobIsDone(connectionGroup, timeout=300):  # 5 minute timeout
+    start_time = time.time()
     while True:
         try:
-            jobStatus = connectionGroup.run("tmux ls")
-            connectionGroup.close()
+            # Check if we've exceeded timeout
+            if time.time() - start_time > timeout:
+                print("Warning: Job check timed out after", timeout, "seconds")
+                return False
+
+            # Check tmux sessions
+            result = connectionGroup.run("tmux ls", hide=True, warn=True)
+
+            # If tmux ls fails or returns empty, job might be done
+            if result.exited != 0 or not result.stdout.strip():
+                print("No active tmux sessions found - job may be complete")
+                return True
+
+            # If we get here, tmux is still running
             time.sleep(10)
-        except:
-            connectionGroup.close()
-            break
+
+        except Exception as e:
+            print(f"Error checking tmux status: {str(e)}")
+            time.sleep(10)
+            # Don't break on error, keep trying until timeout
+            continue
+
+
+if __name__ == "__main__":
+    unaryPlots('INSERT_UNARY_RAND', 'TimescaleDB', [1], ['64.131.114.158'], logScale=True)
