@@ -23,7 +23,9 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
             continue
 
         # Start server
-        serverGroup.put(f"../../scripts/{dbName}/run{dbName}Server.sh")
+        # Use absolute path for script upload
+        script_path = f"scripts/{dbName}/run{dbName}Server.sh"
+        serverGroup.put(script_path)
 
         if WORKLOAD_TYPE == "INSERT":
             serverGroup.run(f"bash run{dbName}Server.sh true {serverWorkingDir}")
@@ -32,7 +34,7 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
         serverGroup.close()
 
         # Start monitoring system stats
-        serverGroup.put(f"../../scripts/sysMonitor.sh")
+        serverGroup.put(f"scripts/sysMonitor.sh")
         serverGroup.run(f"bash sysMonitor.sh 50 {dbName}")
 
         # Schedule workload to be dispatch 2 min from now
@@ -44,10 +46,10 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
             conn = Connection(ip, user=user)
 
             if WORKLOAD_TYPE == "INSERT":
-                conn.put(f"../../scripts/insertBench.sh")
+                conn.put(f"scripts/insertBench.sh")
                 conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}")
             elif WORKLOAD_TYPE == "QUERY":
-                conn.put(f"../../scripts/queryBench.sh")
+                conn.put(f"scripts/queryBench.sh")
                 conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}")
             conn.close()
             print(f"[Benchmark: {totalClients}] [Client: {ip}] - Time now: {int(time.time())} | Delta: {epochTime - int(time.time())}")
@@ -137,7 +139,9 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
 
     for numThread in targetThreads:
         # Start server
-        serverGroup.put(f"../../scripts/{dbName}/run{dbName}Server.sh")
+        # Use absolute path for script upload
+        script_path = f"scripts/{dbName}/run{dbName}Server.sh"
+        serverGroup.put(script_path)
 
         if WORKLOAD_TYPE == "INSERT":
             serverGroup.run(f"bash run{dbName}Server.sh true {serverWorkingDir}")
@@ -146,7 +150,7 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
         serverGroup.close()
 
         # Start monitoring system stats
-        serverGroup.put(f"../../scripts/sysMonitor.sh")
+        serverGroup.put(f"scripts/sysMonitor.sh")
         serverGroup.run(f"bash sysMonitor.sh 50 {dbName}")
 
         # Schedule workload to be dispatch 1 min from now
@@ -157,10 +161,10 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
         conn = Connection(clientNode, user=user)
 
         if WORKLOAD_TYPE == "INSERT":
-            conn.put(f"../../scripts/insertBench.sh")
+            conn.put(f"scripts/insertBench.sh")
             conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}")
         elif WORKLOAD_TYPE == "QUERY":
-            conn.put(f"../../scripts/queryBench.sh")
+            conn.put(f"scripts/queryBench.sh")
             conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}")
         conn.close()
         print(f"[Benchmark: {numThread}] [Client: {clientNode}] - Time now: {int(time.time())} | Delta: {epochTime - int(time.time())}")
