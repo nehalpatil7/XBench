@@ -1,6 +1,7 @@
 #include "XStore/XStore_Adapter.h"
 #include "MongoDB/MongoDB_Adapter.h"
 #include "InfluxDB/InfluxDB_Adapter.h"
+#include "TimescaleDB/TimescaleDB_Adapter.h"
 #include "ProtoBench/ProtoBench.h"
 #include "include/utilities.h"
 #include "include/argparse.hpp"

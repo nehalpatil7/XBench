@@ -39,9 +39,8 @@ sleep 5
 sed -i 's/{10}/{300}/' ../src/HTTP.cxx
 cmake .. -DINFLUXCXX_TESTING:BOOL=OFF -DINFLUXCXX_WITH_BOOST:BOOL=ON && sudo make install; cd ~
 
-# Clone XStore repo (Which includes client code as well)
-# sudo rm -rf XStore; git clone https://gitlab.com/lvn2007/XStore.git
-sudo rm -rf XStore; git clone https://github.com/npatil14/XStore.git
+# Clone XBench (includes client code as well)
+sudo rm -rf XBench; git clone https://github.com/nehalpatil7/XBench
 
 # Compile benchmarkClient
-cd XStore && mkdir -p build && cd build && cmake .. && make -j && cp benchmarkClient ~
+cd XBench && mkdir -p build && cd build && cmake .. && make -j && cp benchmarkClient ~
