@@ -81,8 +81,8 @@ std::vector<double> TimescaleDB_Adapter::unaryInsert(std::string SERVER_ADDR, st
     BS::multi_future<std::vector<double>> multiFuture;
     std::vector<std::vector<double>> nestedVector;
 
-    // Create BENCH_DB
-    std::string dbName = "BENCH_DB";
+    // Create bench_db
+    std::string dbName = "bench_db";
     TimescaleDB_Adapter::createDB(SERVER_ADDR, SERVER_PORT, dbName, &insertData->at(0).at(0));
 
     // Extracting insertData so that each thread will have unique insert data
@@ -110,8 +110,8 @@ std::vector<double> TimescaleDB_Adapter::batchInsert(std::string SERVER_ADDR, st
     BS::multi_future<std::vector<double>> multiFuture;
     std::vector<std::vector<double>> nestedVector;
 
-    // Create BENCH_DB
-    std::string dbName = "BENCH_DB";
+    // Create bench_db
+    std::string dbName = "bench_db";
     TimescaleDB_Adapter::createDB(SERVER_ADDR, SERVER_PORT, dbName, &insertData->at(0).at(0));
 
     // Extracting insertData so that each thread will have unique insert data
@@ -141,7 +141,7 @@ std::vector<double> TimescaleDB_Adapter::unaryQuery_singleThread(std::string SER
 
     // Init TimescaleDB connection
     try {
-        pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "BENCH_DB"));
+        pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "bench_db"));
 
         // Clock init
         std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
@@ -166,7 +166,7 @@ std::vector<double> TimescaleDB_Adapter::unaryQuery_singleThread(std::string SER
                 try {
                     pqxx::work txn(conn);
                     pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM BENCH_DB WHERE timestamp = to_timestamp({});", queryTargetTime)
+                        fmt::format("SELECT * FROM bench_db WHERE timestamp = to_timestamp({});", queryTargetTime)
                     );
                     txn.commit();
 
@@ -201,7 +201,7 @@ std::vector<double> TimescaleDB_Adapter::unaryQuery_singleThread(std::string SER
                 try {
                     pqxx::work txn(conn);
                     pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM BENCH_DB WHERE timestamp = to_timestamp({});", queryTargetTime)
+                        fmt::format("SELECT * FROM bench_db WHERE timestamp = to_timestamp({});", queryTargetTime)
                     );
                     txn.commit();
 
@@ -231,7 +231,7 @@ std::vector<double> TimescaleDB_Adapter::rangeQuery_singleThread(std::string SER
 
     // Init TimescaleDB connection
     try {
-        pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "BENCH_DB"));
+        pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "bench_db"));
 
         // Clock init
         std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
@@ -257,7 +257,7 @@ std::vector<double> TimescaleDB_Adapter::rangeQuery_singleThread(std::string SER
                 try {
                     pqxx::work txn(conn);
                     pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM BENCH_DB WHERE timestamp >= to_timestamp({}) AND timestamp <= to_timestamp({});",
+                        fmt::format("SELECT * FROM bench_db WHERE timestamp >= to_timestamp({}) AND timestamp <= to_timestamp({});",
                                     queryStartTime, queryEndTime)
                     );
                     txn.commit();
@@ -296,7 +296,7 @@ std::vector<double> TimescaleDB_Adapter::rangeQuery_singleThread(std::string SER
                 try {
                     pqxx::work txn(conn);
                     pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM BENCH_DB WHERE timestamp >= to_timestamp({}) AND timestamp <= to_timestamp({});",
+                        fmt::format("SELECT * FROM bench_db WHERE timestamp >= to_timestamp({}) AND timestamp <= to_timestamp({});",
                                     queryStartTime, queryEndTime)
                     );
                     txn.commit();
@@ -327,7 +327,7 @@ std::vector<double> TimescaleDB_Adapter::batchQuery_singleThread(std::string SER
 
     // Init TimescaleDB connection
     try {
-        pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "BENCH_DB"));
+        pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "bench_db"));
 
         // Clock init
         std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
@@ -354,7 +354,7 @@ std::vector<double> TimescaleDB_Adapter::batchQuery_singleThread(std::string SER
                 try {
                     pqxx::work txn(conn);
                     pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM BENCH_DB WHERE timestamp IN ({});", timeList)
+                        fmt::format("SELECT * FROM bench_db WHERE timestamp IN ({});", timeList)
                     );
                     txn.commit();
 
@@ -396,7 +396,7 @@ std::vector<double> TimescaleDB_Adapter::batchQuery_singleThread(std::string SER
                 try {
                     pqxx::work txn(conn);
                     pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM BENCH_DB WHERE timestamp IN ({});", timeList)
+                        fmt::format("SELECT * FROM bench_db WHERE timestamp IN ({});", timeList)
                     );
                     txn.commit();
 
@@ -426,8 +426,8 @@ std::vector<double> TimescaleDB_Adapter::unaryInsert_singleThread(std::string SE
 
     // Init TimescaleDB connection
     try {
-        std::cout << "getConnectionString" << getConnectionString(SERVER_ADDR, SERVER_PORT, "BENCH_DB") << std::endl;
-        pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "BENCH_DB"));
+        std::cout << "getConnectionString" << getConnectionString(SERVER_ADDR, SERVER_PORT, "bench_db") << std::endl;
+        pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "bench_db"));
 
         // Clock init
         std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
@@ -555,7 +555,7 @@ std::vector<double> TimescaleDB_Adapter::batchInsert_singleThread(std::string SE
 
     // Init TimescaleDB connection
     try {
-        pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "BENCH_DB"));
+        pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "bench_db"));
 
         // Clock init
         std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
@@ -713,14 +713,14 @@ void TimescaleDB_Adapter::createDB(std::string SERVER_ADDR, std::string SERVER_P
             }
         } // conn goes out of scope here
 
-        // Now connect to the BENCH_DB database to create the table
+        // Now connect to the bench_db database to create the table
         {
             pqxx::connection dbConn(getConnectionString(SERVER_ADDR, SERVER_PORT, dbName));
             pqxx::work dbTxn(dbConn);
 
             // Create table if it doesn't exist
             std::string createTableSQL = R"(
-                CREATE TABLE IF NOT EXISTS BENCH_DB (
+                CREATE TABLE IF NOT EXISTS bench_db (
                     timestamp TIMESTAMPTZ NOT NULL,
             )";
 
@@ -756,12 +756,12 @@ void TimescaleDB_Adapter::createDB(std::string SERVER_ADDR, std::string SERVER_P
 
             // Check if it's already a hypertable
             pqxx::result result = dbTxn.exec(
-                "SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = 'BENCH_DB';"
+                "SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = 'bench_db';"
             );
 
             if (result.empty()) {
                 // Convert to hypertable if not already
-                dbTxn.exec("SELECT create_hypertable('BENCH_DB', 'timestamp', if_not_exists => TRUE);");
+                dbTxn.exec("SELECT create_hypertable('bench_db', 'timestamp', if_not_exists => TRUE);");
             }
 
             dbTxn.commit();
@@ -781,7 +781,7 @@ std::string TimescaleDB_Adapter::getConnectionString(std::string SERVER_ADDR, st
 }
 
 std::string TimescaleDB_Adapter::prepareInsertStatement(int numFields) {
-    std::string stmt = "INSERT INTO BENCH_DB (timestamp";
+    std::string stmt = "INSERT INTO bench_db (timestamp";
 
     // Add column names
     for (int i = 1; i < numFields; i++) {

@@ -5,9 +5,9 @@ WORKING_DIR="$2"
 
 # Purge existing dataStore & Start server
 if [ "$isPurge" == "true" ]; then
-    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -c \"DROP DATABASE IF EXISTS BENCH_DB;\""
-    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -c \"CREATE DATABASE BENCH_DB;\""
-    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -d BENCH_DB -c \"CREATE EXTENSION IF NOT EXISTS timescaledb;\""
+    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -c \"DROP DATABASE IF EXISTS bench_db;\""
+    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -c \"CREATE DATABASE bench_db;\""
+    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -d bench_db -c \"CREATE EXTENSION IF NOT EXISTS timescaledb;\""
 fi
 
 # Stop PostgreSQL/TimescaleDB

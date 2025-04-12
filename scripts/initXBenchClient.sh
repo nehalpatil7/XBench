@@ -43,4 +43,4 @@ cmake .. -DINFLUXCXX_TESTING:BOOL=OFF -DINFLUXCXX_WITH_BOOST:BOOL=ON && sudo mak
 sudo rm -rf XBench; git clone https://github.com/nehalpatil7/XBench
 
 # Compile benchmarkClient
-cd XBench && mkdir -p build && cd build && cmake .. && make -j && cp benchmarkClient ~
+cd XBench && mkdir -p build && cd build && cmake .. && make -j && cp benchmarkClient ~ && cd ../..
