@@ -28,14 +28,14 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
         serverGroup.put(script_path)
 
         if WORKLOAD_TYPE == "INSERT":
-            serverGroup.run(f"bash run{dbName}Server.sh true {serverWorkingDir}")
+            serverGroup.run(f"bash run{dbName}Server.sh true {serverWorkingDir}", hide=True)
         elif WORKLOAD_TYPE == "QUERY":
-            serverGroup.run(f"bash run{dbName}Server.sh false {serverWorkingDir}")
+            serverGroup.run(f"bash run{dbName}Server.sh false {serverWorkingDir}", hide=True)
         serverGroup.close()
 
         # Start monitoring system stats
         serverGroup.put(f"../../scripts/sysMonitor.sh")
-        serverGroup.run(f"bash sysMonitor.sh 50 {dbName}")
+        serverGroup.run(f"bash sysMonitor.sh 50 {dbName}", hide=True)
 
         # Schedule workload to be dispatch 2 min from now
         epochTime = int(time.time()) + (60 * 2)
@@ -47,10 +47,10 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
 
             if WORKLOAD_TYPE == "INSERT":
                 conn.put(f"../../scripts/insertBench.sh")
-                conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}")
+                conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}", hide=True)
             elif WORKLOAD_TYPE == "QUERY":
                 conn.put(f"../../scripts/queryBench.sh")
-                conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}")
+                conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}", hide=True)
             conn.close()
             print(f"[Benchmark: {totalClients}] [Client: {ip}] - Time now: {int(time.time())} | Delta: {epochTime - int(time.time())}")
 
@@ -63,7 +63,7 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
             print("Warning: Job may not have completed successfully")
 
         # Kill server monitoring
-        serverGroup.run("pkill sar &")
+        serverGroup.run("pkill sar &", hide=True)
 
         # Fetch bench results to this notebook
         #  Get till die since we know data is there from prev. cmd
@@ -78,7 +78,7 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
                     os.makedirs(currPath, exist_ok=True)
 
                     # Fetch remote bench files to retrieve
-                    csvFiles = conn.run("ls *.csv").stdout.split("\n")
+                    csvFiles = conn.run("ls *.csv", hide=True).stdout.split("\n")
 
                     # Download bench results
                     csvCount = 0
@@ -101,7 +101,7 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
 
                     if not hasSysStats:
                         # Fetch remote sysstat files to retrieve
-                        txtFiles = serverGroup[0].run("ls *.txt").stdout.split("\n")
+                        txtFiles = serverGroup[0].run("ls *.txt", hide=True).stdout.split("\n")
 
                         # Download sysstat files
                         for file in txtFiles:
@@ -136,14 +136,14 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
         serverGroup.put(script_path)
 
         if WORKLOAD_TYPE == "INSERT":
-            serverGroup.run(f"bash run{dbName}Server.sh true {serverWorkingDir}")
+            serverGroup.run(f"bash run{dbName}Server.sh true {serverWorkingDir}", hide=True)
         elif WORKLOAD_TYPE == "QUERY":
-            serverGroup.run(f"bash run{dbName}Server.sh false {serverWorkingDir}")
+            serverGroup.run(f"bash run{dbName}Server.sh false {serverWorkingDir}", hide=True)
         serverGroup.close()
 
         # Start monitoring system stats
         serverGroup.put(f"../../scripts/sysMonitor.sh")
-        serverGroup.run(f"bash sysMonitor.sh 50 {dbName}")
+        serverGroup.run(f"bash sysMonitor.sh 50 {dbName}", hide=True)
 
         # Schedule workload to be dispatch 1 min from now
         epochTime = int(time.time()) + 60
@@ -154,10 +154,10 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
 
         if WORKLOAD_TYPE == "INSERT":
             conn.put(f"../../scripts/insertBench.sh")
-            conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}")
+            conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}", hide=True)
         elif WORKLOAD_TYPE == "QUERY":
             conn.put(f"../../scripts/queryBench.sh")
-            conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}")
+            conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}", hide=True)
         conn.close()
         print(f"[Benchmark: {numThread}] [Client: {clientNode}] - Time now: {int(time.time())} | Delta: {epochTime - int(time.time())}")
 
@@ -170,7 +170,7 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
             print("Warning: Job may not have completed successfully")
 
         # Kill server monitoring
-        serverGroup.run("pkill sar &")
+        serverGroup.run("pkill sar &", hide=True)
 
         # Fetch bench results to this notebook
         while True:
@@ -181,7 +181,7 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
                 os.makedirs(currPath, exist_ok=True)
 
                 # Fetch remote bench files to retrieve
-                csvFiles = conn.run("ls *.csv").stdout.split("\n")
+                csvFiles = conn.run("ls *.csv", hide=True).stdout.split("\n")
 
                 # Download bench results
                 csvCount = 0
@@ -204,7 +204,7 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
                 time.sleep(5)
 
                 # Fetch remote sysstat files to retrieve
-                txtFiles = serverGroup[0].run("ls *.txt").stdout.split("\n")
+                txtFiles = serverGroup[0].run("ls *.txt", hide=True).stdout.split("\n")
 
                 # Download sysstat files
                 for file in txtFiles:
