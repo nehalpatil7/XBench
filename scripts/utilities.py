@@ -277,7 +277,7 @@ def unaryPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, logScale=Fals
     plt.legend(bbox_to_anchor=(0., -0.35, 1., 0.102), loc='lower center', mode='expand', ncols=3, borderaxespad=0, markerscale=3)
     plt.tight_layout(pad=0.15)
     plt.autoscale(axis='x')
-    plt.savefig(f"../Drivers/{DB_NAME}/{DB_NAME.upper()}_{WORKLOAD_TYPE}.svg", format='svg')
+    plt.savefig(f"{DB_NAME.upper()}_{WORKLOAD_TYPE}.svg", format='svg')
 
 def batchPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, batchSize=1000):
     numClients = [i * len(clientNodes) for i in targetThreads]
