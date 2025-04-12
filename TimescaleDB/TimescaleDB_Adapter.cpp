@@ -426,6 +426,7 @@ std::vector<double> TimescaleDB_Adapter::unaryInsert_singleThread(std::string SE
 
     // Init TimescaleDB connection
     try {
+        std::cout << "getConnectionString" << getConnectionString(SERVER_ADDR, SERVER_PORT, "BENCH_DB") << std::endl;
         pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "BENCH_DB"));
 
         // Clock init

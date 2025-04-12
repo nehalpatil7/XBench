@@ -7,6 +7,7 @@ THREAD_COUNT="$6"
 N_ITER="$7"
 BATCH_ITER="$8"
 INVOKE_AT="$9"
+DEBUG="$10"
 
 # Parsed EXPERIMENT_TYPE
 WORKLOAD=$(echo $EXPERIMENT_TYPE | cut -d '_' -f 1)
@@ -32,4 +33,8 @@ cp -r 10Y_32-Cols_Experiments/$WORKLOAD\_INSERT_$PATTERN/$WORKLOAD\_INSERT_$PATT
 tmux new-session -d -s $DB_NAME -n Client
 
 # Dispatch workload
-tmux send-keys -t "Client" "./benchmarkClient insertBench -i $SERVER_ADDR -p $SERVER_PORT -d $DB_NAME -t $THREAD_COUNT -e $EXPERIMENT_TYPE -n $N_ITER -b $BATCH_ITER -ia $INVOKE_AT && tmux kill-server" C-m
+if [ "$DEBUG" = "true" ] || [ "$DEBUG" = "1" ]; then
+    tmux send-keys -t "Client" "./benchmarkClient insertBench -i $SERVER_ADDR -p $SERVER_PORT -d $DB_NAME -t $THREAD_COUNT -e $EXPERIMENT_TYPE -n $N_ITER -b $BATCH_ITER -ia $INVOKE_AT --debug && tmux kill-server" C-m
+else
+    tmux send-keys -t "Client" "./benchmarkClient insertBench -i $SERVER_ADDR -p $SERVER_PORT -d $DB_NAME -t $THREAD_COUNT -e $EXPERIMENT_TYPE -n $N_ITER -b $BATCH_ITER -ia $INVOKE_AT && tmux kill-server" C-m
+fi

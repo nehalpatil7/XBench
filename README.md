@@ -16,6 +16,10 @@ Source code for project XBench and its related work.
 * Google Protocol Buffer v3.18.1 or higher
 * ZeroMQ CPP v4.8.1 or higher
 
+# Testing
+* If the code executes but returns zeros, try executing this cmd on the client machine
+> ./benchmarkClient {insertBench} -i {SERVER_IP | 127.0.0.1} -p 9493 -d {DB_NAME_ALL_CAPS} -t 1 -e {UNARY_SEQ} -n 1000 -b 0 -ia {current_timestamp + 10} --debug
+
 # How to Install
 * [Installation Wiki]&#40;https://gitlab.com/lvn2007/XStore/-/wikis/installation&#41;
 

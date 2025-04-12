@@ -82,10 +82,10 @@ host    all             all             0.0.0.0/0               trust
 # IPv6 local connections:
 host    all             all             ::0/0                   trust
 # Allow replication connections from localhost, by a user with the replication privilege.
-local   replication     all                                     peer
+local   replication     all                                     trust
 host    replication     all             127.0.0.1/32            trust
 host    replication     all             ::1/128                 trust
-host    all             all             0.0.0.0/0               md5
+host    all             all             0.0.0.0/0               trust
 EOF
 
 
@@ -114,20 +114,7 @@ fi
 
 
 
-printf "\n[INFO $(date '+%Y-%m-%d %H:%M:%S')] Switching PostgreSQL auth to md5 for remote connections...\n"
-# Backup pg_hba.conf & replace peer with md5
-sudo cp "${PG_HBA}" "${PG_HBA}.bak"
-sudo sed -i 's/^\(local\s\+all\s\+postgres\s\+\)peer/\1md5/' "$PG_HBA"
-sudo sed -i 's/^\(local\s\+all\s\+all\s\+\)peer/\1md5/' "$PG_HBA"
 sudo systemctl reload postgresql
 sleep 10
-
-
-
-
-
-
-
-# Final restart
 sudo systemctl restart postgresql@14-main
 printf "\n\nTimescaleDB installation and configuration completed.\n\n"
