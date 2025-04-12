@@ -291,6 +291,9 @@ int main(int argc, char const *argv[])
                 spdlog::warn("[BATCH QUERY] REF 1: https://docs.influxdata.com/influxdb/v1/query_language/explore-data/#syntax-1");
                 spdlog::warn("[BATCH QUERY] REF 2: https://community.influxdata.com/t/querying-multiple-time-points/35388");
             }
+            else if (TARGET_DB == "TIMESCALEDB") {
+                timeCost = TimescaleDB_Adapter::batchQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
         }
 
         // Display benchmark statistics
@@ -350,7 +353,7 @@ int main(int argc, char const *argv[])
                 timeCost = InfluxDB_Adapter::unaryInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, N_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
             else if (TARGET_DB == "TIMESCALEDB") {
-                timeCost = TimescaleDB_Adapter::unaryInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+                timeCost = TimescaleDB_Adapter::unaryInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, N_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
         }
         else if (EXPERIMENT_TYPE == "UNARY_RAND") {
@@ -379,7 +382,7 @@ int main(int argc, char const *argv[])
                 timeCost = InfluxDB_Adapter::unaryInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, N_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
             else if (TARGET_DB == "TIMESCALEDB") {
-                timeCost = TimescaleDB_Adapter::unaryInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+                timeCost = TimescaleDB_Adapter::unaryInsert(SERVER_ADDR, SERVER_PORT, NUM_THREAD, N_ITERATIONS, &insertWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
         }
         else if (EXPERIMENT_TYPE == "BATCH_SEQ") {

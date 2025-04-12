@@ -7,9 +7,9 @@ WORKING_DIR="$2"
 if [ "$isPurge" == "true" ]; then
     echo "Purging existing dataStore & Starting TimescaleDB server..."
 
-    sudo -u postgres psql -p 9493 -c "DROP DATABASE IF EXISTS bench_db;"
-    sudo -u postgres psql -p 9493 -c "CREATE DATABASE bench_db;"
-    sudo -u postgres psql -p 9493 -d bench_db -c "CREATE EXTENSION IF NOT EXISTS timescaledb;"
+    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -c \"DROP DATABASE IF EXISTS bench_db;\""
+    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -c \"CREATE DATABASE bench_db;\""
+    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -d bench_db -c \"CREATE EXTENSION IF NOT EXISTS timescaledb;\""
 fi
 
 # Stop PostgreSQL/TimescaleDB

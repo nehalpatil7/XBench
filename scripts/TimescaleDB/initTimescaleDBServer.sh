@@ -70,7 +70,7 @@ sleep 10
 sudo sed -i "s/^port = [0-9]*/port = 9493/" ${PG_CONF_DIR}/postgresql.conf
 sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" ${PG_CONF_DIR}/postgresql.conf
 sleep 5
-cat <<EOF > ${PG_HBA}
+sudo tee /etc/postgresql/14/main/pg_hba.conf > /dev/null <<EOF
 local   all             postgres                                trust
 
 # TYPE  DATABASE        USER            ADDRESS                 METHOD
@@ -82,10 +82,10 @@ host    all             all             0.0.0.0/0               trust
 # IPv6 local connections:
 host    all             all             ::0/0                   trust
 # Allow replication connections from localhost, by a user with the replication privilege.
-local   replication     all                                     trust
+local   replication     all                                     peer
 host    replication     all             127.0.0.1/32            trust
 host    replication     all             ::1/128                 trust
-host    all             all             0.0.0.0/0               trust
+host    all             all             0.0.0.0/0               md5
 EOF
 
 
