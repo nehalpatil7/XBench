@@ -3,19 +3,17 @@
 WORKING_DIR="$1"
 
 # Postgres-14 path definitions
-PG_VERSION="14"
-PG_CONF_DIR="/etc/postgresql/${PG_VERSION}/main"
-PG_DATA_DIR="/var/lib/postgresql/${PG_VERSION}/main"
+PG_CONF_DIR="/etc/postgresql/14/main"
+PG_DATA_DIR="/var/lib/postgresql/14/main"
+PG_HBA="${PG_CONF_DIR}/pg_hba.conf"
 
 # Install sysstat, build-essential, g++, libpqxx-dev, libpq-dev
 sudo apt install sysstat build-essential g++ libpqxx-dev libpq-dev -y
 
-# Clean up any existing PostgreSQL installations
+# Clean up any existing PostgreSQL installations (noninteractive)
 sudo systemctl stop postgresql@14-main || true
 sudo systemctl disable postgresql@14-main || true
 sudo systemctl reset-failed postgresql@14-main || true
-
-# Remove packages with noninteractive frontend
 echo "postgresql-14 postgresql-14/purge-data boolean true" | sudo debconf-set-selections
 sudo DEBIAN_FRONTEND=noninteractive apt-get remove --purge postgresql* timescaledb* -y || true
 sudo DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
@@ -27,15 +25,17 @@ sudo rm -rf /etc/postgresql/
 sudo rm -rf /run/postgresql/
 sudo rm -f /lib/systemd/system/postgresql@.service
 sudo rm -rf ${WORKING_DIR}/postgresql/*
-printf "\nRemoved existing PostgreSQL and TimescaleDB installations.\n\n"
+printf "\n[INFO $(date '+%Y-%m-%d %H:%M:%S')] Removed existing PostgreSQL and TimescaleDB installations.\n"
 
-# cd inproper working dir
+
+
+
+
+
+
 cd ${WORKING_DIR}
-
-# Add PostgreSQL repo
+# Add PostgreSQL repo & setup
 sudo apt install -y gnupg postgresql-common apt-transport-https lsb-release wget
-
-# Run the PostgreSQL repo setup script
 sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 
 # Add TimescaleDB repo
@@ -44,54 +44,74 @@ wget --quiet -O - https://packagecloud.io/timescale/timescaledb/gpgkey | sudo ap
 
 # Update package lists
 sudo apt update
+sleep 5
 
-# Install PostgreSQL and TimescaleDB
+# Install PostgreSQL and TimescaleDB & timescaledb-tune
 sudo apt install -y postgresql-14 postgresql-client-14 timescaledb-2-postgresql-14
-
-# Configure TimescaleDB
+sleep 5
 sudo timescaledb-tune --quiet --yes
+sudo systemctl restart postgresql@14-main
+sleep 10
+
+
+
+
+
+
+
+echo "[INFO $(date '+%Y-%m-%d %H:%M:%S')] Creating DB and user setup on default port (5432)..."
+sudo -u postgres bash -c "cd /tmp && psql -c \"ALTER USER postgres WITH PASSWORD 'postgres';\""
+sudo -u postgres bash -c "cd /tmp && psql -c \"CREATE DATABASE bench_db;\"" || true
+sudo -u postgres bash -c "cd /tmp && psql -d bench_db -c \"CREATE EXTENSION IF NOT EXISTS timescaledb;\"" || true
+sudo systemctl restart postgresql@14-main
+sleep 10
 
 # Change PostgreSQL's default port to 9493 & bind to all interfaces
 sudo sed -i "s/^port = [0-9]*/port = 9493/" ${PG_CONF_DIR}/postgresql.conf
 sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" ${PG_CONF_DIR}/postgresql.conf
-sleep 2
+sleep 5
+echo "host all all 0.0.0.0/0 md5" | sudo tee -a ${PG_HBA}
 
-# Allow remote connections
-echo "host all all 0.0.0.0/0 md5" | sudo tee -a ${PG_CONF_DIR}/pg_hba.conf
+
+
+
+
+
 
 # If data will be stored on different drive
-#  Otherwise, leave as default
 if [ -d "$WORKING_DIR" ]; then
-    # Create directory for PostgreSQL data
     mkdir -p ${WORKING_DIR}/postgresql
     sudo chmod -R 700 ${WORKING_DIR}/postgresql
     sudo chown -R postgres:postgres ${WORKING_DIR}/postgresql
 
-    # Stop PostgreSQL service
     sudo systemctl stop postgresql@14-main
     sleep 10
 
-    # Initialize the new data directory
     sudo -u postgres /usr/lib/postgresql/14/bin/initdb -D ${WORKING_DIR}/postgresql
-
-    # Update data directory in PostgreSQL configuration
     sudo sed -i "s|data_directory = '${PG_DATA_DIR}'|data_directory = '${WORKING_DIR}/postgresql'|" ${PG_CONF_DIR}/postgresql.conf
     sleep 2
 fi
 
-# Set PostgreSQL password
-sudo -u postgres psql -p 9493 -c "ALTER USER postgres WITH PASSWORD 'postgres';"
-sleep 5
 
-# Start PostgreSQL service
-sudo systemctl start postgresql@14-main
+
+
+
+
+
+printf "\n[INFO $(date '+%Y-%m-%d %H:%M:%S')] Switching PostgreSQL auth to md5 for remote connections...\n"
+# Backup pg_hba.conf & replace peer with md5
+sudo cp "${PG_HBA}" "${PG_HBA}.bak"
+sudo sed -i 's/^\(local\s\+all\s\+postgres\s\+\)peer/\1md5/' "$PG_HBA"
+sudo sed -i 's/^\(local\s\+all\s\+all\s\+\)peer/\1md5/' "$PG_HBA"
+sudo systemctl reload postgresql
 sleep 10
 
-# Create database and extension with error handling
-sudo -u postgres psql -p 9493 -c "CREATE DATABASE bench_db;" || true
-sudo -u postgres psql -p 9493 -d bench_db -c "CREATE EXTENSION IF NOT EXISTS timescaledb;" || true
 
-# Restart PostgreSQL to reflect all changes
+
+
+
+
+
+# Final restart
 sudo systemctl restart postgresql@14-main
-
 printf "\n\nTimescaleDB installation and configuration completed.\n\n"
