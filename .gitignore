@@ -2,3 +2,16 @@ xbench_env/
 build/
 test.py
 scripts/__pycache__/
+
+# Results
+Drivers/*/TIMESCALEDB_*_*_*/
+Drivers/TimescaleDB/*.svg
+
+Drivers/*/MONGODB_*_*_*/
+Drivers/MongoDB/*.svg
+
+Drivers/*/INFLUXDB_*_*_*/
+Drivers/InfluxDB/*.svg
+
+Drivers/*/XSTORE_*_*_*/
+Drivers/XStore/*.svg

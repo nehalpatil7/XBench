@@ -229,17 +229,17 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
 
 def unaryPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, logScale=False):
     numClients = [i * len(clientNodes) for i in targetThreads]
-    clientDir = sorted([i for i in os.listdir(f"../Drivers/{DB_NAME}/{DB_NAME.upper()}_{WORKLOAD_TYPE}")], key=lambda x:int(x.split("-")[-1]))
+    clientDir = sorted([i for i in os.listdir(f"{DB_NAME.upper()}_{WORKLOAD_TYPE}")], key=lambda x:int(x.split("-")[-1]))
     benchData = {}
 
     for idx, i in enumerate(clientDir):
         if int(i.split('-')[1]) > 64:
             continue
         currCSVdata = []
-        currClientDir = [cDir for cDir in os.listdir(f"../Drivers/{DB_NAME}/{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}")]
+        currClientDir = [cDir for cDir in os.listdir(f"{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}")]
 
         for nodeIdx, item in enumerate(currClientDir):
-            myDir = f"../Drivers/{DB_NAME}/{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}/{item}"
+            myDir = f"{DB_NAME.upper()}_{WORKLOAD_TYPE}/{i}/{item}"
             csvFiles = os.listdir(myDir)
             csvFiles = [csvFile for csvFile in csvFiles if csvFile.endswith(".csv")]
 
@@ -349,28 +349,33 @@ def poller(epochTime):
     while time.time() <= epochTime:
         time.sleep(1)
 
+
 def checkTmuxJobIsDone(connectionGroup, timeout=300):  # 5 minute timeout
     start_time = time.time()
+
     while True:
         try:
-            # Check if we've exceeded timeout
+            print("checking tmux job status")
             if time.time() - start_time > timeout:
                 print("Warning: Job check timed out after", timeout, "seconds")
                 return False
 
-            # Check tmux sessions
-            result = connectionGroup.run("tmux ls", hide=True, warn=True)
+            results = connectionGroup.run("tmux ls", hide=True, warn=True)
+            all_done = True
 
-            # If tmux ls fails or returns empty, job might be done
-            if result.exited != 0 or not result.stdout.strip():
+            for conn, result in results.items():
+                if result.ok and result.stdout.strip():
+                    print(f"Active tmux sessions on {conn.host}:\n{result.stdout.strip()}")
+                    all_done = False
+                    break
+
+            if all_done:
                 print("No active tmux sessions found - job may be complete")
                 return True
 
-            # If we get here, tmux is still running
             time.sleep(10)
 
         except Exception as e:
             print(f"Error checking tmux status: {str(e)}")
             time.sleep(10)
-            # Don't break on error, keep trying until timeout
             continue
