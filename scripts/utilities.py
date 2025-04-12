@@ -355,7 +355,6 @@ def checkTmuxJobIsDone(connectionGroup, timeout=300):  # 5 minute timeout
 
     while True:
         try:
-            print("checking tmux job status")
             if time.time() - start_time > timeout:
                 print("Warning: Job check timed out after", timeout, "seconds")
                 return False

@@ -59,10 +59,10 @@ sleep 10
 
 
 
-echo "[INFO $(date '+%Y-%m-%d %H:%M:%S')] Creating DB and user setup on default port (5432)..."
+printf "[INFO $(date '+%Y-%m-%d %H:%M:%S')] Creating DB and user setup on default port (5432)..."
 sudo -u postgres bash -c "cd /tmp && psql -c \"ALTER USER postgres WITH PASSWORD 'postgres';\""
-sudo -u postgres bash -c "cd /tmp && psql -c \"CREATE DATABASE bench_db;\"" || true
-sudo -u postgres bash -c "cd /tmp && psql -d bench_db -c \"CREATE EXTENSION IF NOT EXISTS timescaledb;\"" || true
+sudo -u postgres bash -c "cd /tmp && psql -c \"CREATE DATABASE BENCH_DB;\"" || true
+sudo -u postgres bash -c "cd /tmp && psql -d BENCH_DB -c \"CREATE EXTENSION IF NOT EXISTS timescaledb;\"" || true
 sudo systemctl restart postgresql@14-main
 sleep 10
 
@@ -117,4 +117,4 @@ fi
 sudo systemctl reload postgresql
 sleep 10
 sudo systemctl restart postgresql@14-main
-printf "\n\nTimescaleDB installation and configuration completed.\n\n"
+printf "[INFO $(date '+%Y-%m-%d %H:%M:%S')] TimescaleDB installation and configuration completed.\n\n"

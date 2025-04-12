@@ -5,11 +5,9 @@ WORKING_DIR="$2"
 
 # Purge existing dataStore & Start server
 if [ "$isPurge" == "true" ]; then
-    echo "Purging existing dataStore & Starting TimescaleDB server..."
-
-    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -c \"DROP DATABASE IF EXISTS bench_db;\""
-    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -c \"CREATE DATABASE bench_db;\""
-    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -d bench_db -c \"CREATE EXTENSION IF NOT EXISTS timescaledb;\""
+    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -c \"DROP DATABASE IF EXISTS BENCH_DB;\""
+    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -c \"CREATE DATABASE BENCH_DB;\""
+    sudo -u postgres bash -c "cd /tmp && psql -p 9493 -d BENCH_DB -c \"CREATE EXTENSION IF NOT EXISTS timescaledb;\""
 fi
 
 # Stop PostgreSQL/TimescaleDB
@@ -23,4 +21,4 @@ free > /dev/null && sync > /dev/null && sudo sh -c 'echo 3 > /proc/sys/vm/drop_c
 sudo systemctl start postgresql && sudo systemctl restart postgresql
 sleep 10
 
-echo "TimescaleDB server is ready."
+printf "[INFO $(date '+%Y-%m-%d %H:%M:%S')] TimescaleDB server is ready."

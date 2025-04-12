@@ -756,7 +756,7 @@ void TimescaleDB_Adapter::createDB(std::string SERVER_ADDR, std::string SERVER_P
 
             // Check if it's already a hypertable
             pqxx::result result = dbTxn.exec(
-                "SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = 'bench_db';"
+                "SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = 'BENCH_DB';"
             );
 
             if (result.empty()) {
