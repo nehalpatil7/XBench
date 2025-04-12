@@ -59,7 +59,7 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
         time.sleep(60)
 
         # Checking for job completion with timeout
-        if not checkTmuxJobIsDone(serverGroup):
+        if not checkTmuxJobIsDone(serverGroup, debug=debug):
             print("Warning: Job may not have completed successfully")
 
         # Kill server monitoring
@@ -166,7 +166,7 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
         time.sleep(60)
 
         # Checking for job completion with timeout
-        if not checkTmuxJobIsDone(serverGroup):
+        if not checkTmuxJobIsDone(serverGroup, debug=debug):
             print("Warning: Job may not have completed successfully")
 
         # Kill server monitoring
@@ -350,7 +350,7 @@ def poller(epochTime):
         time.sleep(1)
 
 
-def checkTmuxJobIsDone(connectionGroup, timeout=300):  # 5 minute timeout
+def checkTmuxJobIsDone(connectionGroup, debug=False, timeout=300):
     start_time = time.time()
 
     while True:
@@ -364,7 +364,8 @@ def checkTmuxJobIsDone(connectionGroup, timeout=300):  # 5 minute timeout
 
             for conn, result in results.items():
                 if result.ok and result.stdout.strip():
-                    print(f"Active tmux sessions on {conn.host}:\n{result.stdout.strip()}")
+                    if debug:
+                        print(f"Active tmux sessions on {conn.host}: {result.stdout.strip()}")
                     all_done = False
                     break
 
