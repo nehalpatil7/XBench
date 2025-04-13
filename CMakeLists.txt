@@ -11,6 +11,9 @@ endif()
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Suppress specific warnings
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -Wno-unused-parameter -Wno-unused-result -Wno-return-type")
+
 # C++ standard
 set(CMAKE_CXX_STANDARD 17)
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")

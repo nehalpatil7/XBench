@@ -150,71 +150,43 @@ std::vector<double> TimescaleDB_Adapter::unaryQuery_singleThread(std::string SER
         // Query target time
         unsigned long int queryTargetTime;
 
-        // DEBUG mode
-        if (isDebug) {
-            for (int i = 0; i < N_ITERATION; i++) {
-                queryTargetTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryTargetTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
 
-                if (timedOut) {
+            if (timedOut) {
+                if (isDebug) {
                     spdlog::warn("[UNARY QUERY] - There was an exception or operation has timed-out");
-                    toReturn.push_back(0);
-                    continue;
                 }
+                toReturn.push_back(0);
+                continue;
+            }
 
-                // Dispatch query
-                start = std::chrono::high_resolution_clock::now();
-                try {
-                    pqxx::work txn(conn);
-                    pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM bench_db WHERE timestamp = to_timestamp({});", queryTargetTime)
-                    );
-                    txn.commit();
+            // Dispatch query
+            start = std::chrono::high_resolution_clock::now();
+            try {
+                pqxx::work txn(conn);
+                pqxx::result result = txn.exec(
+                    fmt::format("SELECT * FROM bench_db WHERE timestamp = to_timestamp({});", queryTargetTime)
+                );
+                txn.commit();
 
-                    end = std::chrono::high_resolution_clock::now();
-                    timeCost = end - start;
-                    toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
+                end = std::chrono::high_resolution_clock::now();
+                timeCost = end - start;
+                toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
 
-                    // Debug
-                    if (!result.empty()) {
-                        spdlog::debug("[UNARY QUERY] - Querying: {} | Query Result: {}", queryTargetTime, result[0]["timestamp"].c_str());
-                    }
+                if (isDebug) {
+                    spdlog::debug("[UNARY QUERY] - Querying: {} | Query Result: {}", queryTargetTime, result[0]["timestamp"].c_str());
                 }
-                catch (const std::exception &e) {
+            }
+            catch (const std::exception &e) {
+                if (isDebug) {
                     spdlog::warn("[UNARY QUERY] - There was an exception or operation has timed-out: {}", e.what());
-                    toReturn.push_back(0);
-                    timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
                 }
+                toReturn.push_back(0);
+                timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
             }
         }
-        // NOT a debug mode
-        else {
-            for (int i = 0; i < N_ITERATION; i++) {
-                queryTargetTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
 
-                if (timedOut) {
-                    toReturn.push_back(0);
-                    continue;
-                }
-
-                // Dispatch query
-                start = std::chrono::high_resolution_clock::now();
-                try {
-                    pqxx::work txn(conn);
-                    pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM bench_db WHERE timestamp = to_timestamp({});", queryTargetTime)
-                    );
-                    txn.commit();
-
-                    end = std::chrono::high_resolution_clock::now();
-                    timeCost = end - start;
-                    toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
-                }
-                catch (const std::exception &e) {
-                    toReturn.push_back(0);
-                    timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
-                }
-            }
-        }
     }
     catch (const std::exception &e) {
         spdlog::error("[UNARY QUERY] - Connection error: {}", e.what());
@@ -240,75 +212,42 @@ std::vector<double> TimescaleDB_Adapter::rangeQuery_singleThread(std::string SER
         // Query target time
         unsigned long int queryStartTime, queryEndTime;
 
-        // DEBUG mode
-        if (isDebug) {
-            for (int i = 0; i < N_ITERATION; i++) {
-                queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
-                queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+            queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
 
-                if (timedOut) {
+            if (timedOut) {
+                if (isDebug) {
                     spdlog::warn("[RANGE QUERY] - There was an exception or operation has timed-out");
-                    toReturn.push_back(0);
-                    continue;
                 }
+                toReturn.push_back(0);
+                continue;
+            }
 
-                // Dispatch query
-                start = std::chrono::high_resolution_clock::now();
-                try {
-                    pqxx::work txn(conn);
-                    pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM bench_db WHERE timestamp >= to_timestamp({}) AND timestamp <= to_timestamp({});",
-                                    queryStartTime, queryEndTime)
-                    );
-                    txn.commit();
+            // Dispatch query
+            start = std::chrono::high_resolution_clock::now();
+            try {
+                pqxx::work txn(conn);
+                pqxx::result result = txn.exec(
+                    fmt::format("SELECT * FROM bench_db WHERE timestamp >= to_timestamp({}) AND timestamp <= to_timestamp({});",
+                                queryStartTime, queryEndTime)
+                );
+                txn.commit();
 
-                    end = std::chrono::high_resolution_clock::now();
-                    timeCost = end - start;
-                    toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
+                end = std::chrono::high_resolution_clock::now();
+                timeCost = end - start;
+                toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
 
-                    // Debug
-                    std::vector<std::string> resultVector;
-                    for (auto row : result) {
-                        resultVector.push_back(row["timestamp"].c_str());
-                    }
+                if (isDebug) {
                     spdlog::debug("[RANGE QUERY] - From: {} to {} | Query Result: {}", queryStartTime, queryEndTime, fmt::join(resultVector, "\n"));
                 }
-                catch (const std::exception &e) {
-                    spdlog::warn("[RANGE QUERY] - There was an exception or operation has timed-out: {}", e.what());
-                    toReturn.push_back(0);
-                    timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
-                }
             }
-        }
-        // NOT a debug mode
-        else {
-            for (int i = 0; i < N_ITERATION; i++) {
-                queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
-                queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
-
-                if (timedOut) {
-                    toReturn.push_back(0);
-                    continue;
+            catch (const std::exception &e) {
+                if (isDebug) {
+                    spdlog::warn("[RANGE QUERY] - There was an exception or operation has timed-out: {}", e.what());
                 }
-
-                // Dispatch query
-                start = std::chrono::high_resolution_clock::now();
-                try {
-                    pqxx::work txn(conn);
-                    pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM bench_db WHERE timestamp >= to_timestamp({}) AND timestamp <= to_timestamp({});",
-                                    queryStartTime, queryEndTime)
-                    );
-                    txn.commit();
-
-                    end = std::chrono::high_resolution_clock::now();
-                    timeCost = end - start;
-                    toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
-                }
-                catch (const std::exception &e) {
-                    toReturn.push_back(0);
-                    timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
-                }
+                toReturn.push_back(0);
+                timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
             }
         }
     }
@@ -333,81 +272,45 @@ std::vector<double> TimescaleDB_Adapter::batchQuery_singleThread(std::string SER
         std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
         std::chrono::duration<double> timeCost;
 
-        // DEBUG mode
-        if (isDebug) {
-            for (int i = 0; i < N_ITERATION; i++) {
-                // Extract target times into a list for IN clause
-                std::string timeList;
-                for (int j = 0; j < queryData->at(i).size(); j++) {
-                    if (j > 0) timeList += ", ";
-                    timeList += fmt::format("to_timestamp({})", std::any_cast<unsigned long int>(queryData->at(i).at(j)));
-                }
+        for (int i = 0; i < N_ITERATION; i++) {
+            // Extract target times into a list for IN clause
+            std::string timeList;
+            for (int j = 0; j < queryData->at(i).size(); j++) {
+                if (j > 0) timeList += ", ";
+                timeList += fmt::format("to_timestamp({})", std::any_cast<unsigned long int>(queryData->at(i).at(j)));
+            }
 
-                if (timedOut) {
+            if (timedOut) {
+                if (isDebug) {
                     spdlog::warn("[BATCH QUERY] - There was an exception or operation has timed-out");
-                    toReturn.push_back(0);
-                    continue;
                 }
+                toReturn.push_back(0);
+                continue;
+            }
 
-                // Dispatch query
-                start = std::chrono::high_resolution_clock::now();
-                try {
-                    pqxx::work txn(conn);
-                    pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM bench_db WHERE timestamp IN ({});", timeList)
-                    );
-                    txn.commit();
+            // Dispatch query
+            start = std::chrono::high_resolution_clock::now();
+            try {
+                pqxx::work txn(conn);
+                pqxx::result result = txn.exec(
+                    fmt::format("SELECT * FROM bench_db WHERE timestamp IN ({});", timeList)
+                );
+                txn.commit();
+                end = std::chrono::high_resolution_clock::now();
 
-                    end = std::chrono::high_resolution_clock::now();
-                    timeCost = end - start;
-                    toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
+                timeCost = end - start;
+                toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
 
-                    // Debug
-                    std::vector<std::string> resultVector;
-                    for (auto row : result) {
-                        resultVector.push_back(row["timestamp"].c_str());
-                    }
+                if (isDebug) {
                     spdlog::debug("[BATCH QUERY] - Query Result: {}", fmt::join(resultVector, "\n"));
                 }
-                catch (const std::exception &e) {
-                    spdlog::warn("[BATCH QUERY] - There was an exception or operation has timed-out: {}", e.what());
-                    toReturn.push_back(0);
-                    timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
-                }
             }
-        }
-        // NOT a debug mode
-        else {
-            for (int i = 0; i < N_ITERATION; i++) {
-                // Extract target times into a list for IN clause
-                std::string timeList;
-                for (int j = 0; j < queryData->at(i).size(); j++) {
-                    if (j > 0) timeList += ", ";
-                    timeList += fmt::format("to_timestamp({})", std::any_cast<unsigned long int>(queryData->at(i).at(j)));
+            catch (const std::exception &e) {
+                if (isDebug) {
+                    spdlog::warn("[BATCH QUERY] - There was an exception or operation has timed-out: {}", e.what());
                 }
-
-                if (timedOut) {
-                    toReturn.push_back(0);
-                    continue;
-                }
-
-                // Dispatch query
-                start = std::chrono::high_resolution_clock::now();
-                try {
-                    pqxx::work txn(conn);
-                    pqxx::result result = txn.exec(
-                        fmt::format("SELECT * FROM bench_db WHERE timestamp IN ({});", timeList)
-                    );
-                    txn.commit();
-
-                    end = std::chrono::high_resolution_clock::now();
-                    timeCost = end - start;
-                    toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
-                }
-                catch (const std::exception &e) {
-                    toReturn.push_back(0);
-                    timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
-                }
+                toReturn.push_back(0);
+                timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
             }
         }
     }
@@ -426,7 +329,6 @@ std::vector<double> TimescaleDB_Adapter::unaryInsert_singleThread(std::string SE
 
     // Init TimescaleDB connection
     try {
-        std::cout << "getConnectionString" << getConnectionString(SERVER_ADDR, SERVER_PORT, "bench_db") << std::endl;
         pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "bench_db"));
 
         // Clock init
@@ -436,107 +338,60 @@ std::vector<double> TimescaleDB_Adapter::unaryInsert_singleThread(std::string SE
         // Prepare the insert statement once
         std::string insertStmt = prepareInsertStatement(insertData->at(0).size());
 
-        // DEBUG mode
-        if (isDebug) {
-            for (int i = 0; i < N_ITERATION; i++) {
-                if (timedOut) {
+        for (int i = 0; i < N_ITERATION; i++) {
+            if (timedOut) {
+                if (isDebug) {
                     spdlog::warn("[UNARY INSERT] - There was an exception or operation has timed-out");
-                    toReturn.push_back(0);
-                    continue;
+                }
+                toReturn.push_back(0);
+                continue;
+            }
+
+            // Dispatch insert
+            try {
+                pqxx::work txn(conn);
+
+                // Prepare parameters
+                std::vector<std::string> params;
+
+                // Timestamp
+                unsigned long int timestamp = std::any_cast<unsigned long int>(insertData->at(i).at(0));
+                params.push_back(fmt::format("to_timestamp({})", timestamp));
+
+                // Other fields
+                std::any currentMetric;
+                for (int j = 1; j < insertData->at(i).size(); j++) {
+                    currentMetric = insertData->at(i).at(j);
+                    if (currentMetric.type() == typeid(std::string)) {
+                        params.push_back(fmt::format("'{}'", std::any_cast<std::string>(currentMetric)));
+                    }
+                    else if (currentMetric.type() == typeid(int)) {
+                        params.push_back(fmt::format("{}", std::any_cast<int>(currentMetric)));
+                    }
+                    else if (currentMetric.type() == typeid(double)) {
+                        params.push_back(fmt::format("{}", std::any_cast<double>(currentMetric)));
+                    }
                 }
 
-                // Dispatch insert
+                // Execute the insert
                 start = std::chrono::high_resolution_clock::now();
-                try {
-                    pqxx::work txn(conn);
+                txn.exec(fmt::format(fmt::runtime(insertStmt), fmt::join(params, ", ")));
+                txn.commit();
+                end = std::chrono::high_resolution_clock::now();
 
-                    // Prepare parameters
-                    std::vector<std::string> params;
+                timeCost = end - start;
+                toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
 
-                    // Timestamp
-                    unsigned long int timestamp = std::any_cast<unsigned long int>(insertData->at(i).at(0));
-                    params.push_back(fmt::format("to_timestamp({})", timestamp));
-
-                    // Other fields
-                    std::any currentMetric;
-                    for (int j = 1; j < insertData->at(i).size(); j++) {
-                        currentMetric = insertData->at(i).at(j);
-                        if (currentMetric.type() == typeid(std::string)) {
-                            params.push_back(fmt::format("'{}'", std::any_cast<std::string>(currentMetric)));
-                        }
-                        else if (currentMetric.type() == typeid(int)) {
-                            params.push_back(fmt::format("{}", std::any_cast<int>(currentMetric)));
-                        }
-                        else if (currentMetric.type() == typeid(double)) {
-                            params.push_back(fmt::format("{}", std::any_cast<double>(currentMetric)));
-                        }
-                    }
-
-                    // Execute the insert
-                    txn.exec(fmt::format(fmt::runtime(insertStmt), fmt::join(params, ", ")));
-                    txn.commit();
-
-                    end = std::chrono::high_resolution_clock::now();
-                    timeCost = end - start;
-                    toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
-
-                    // Debug
+                if (isDebug) {
                     spdlog::debug("[UNARY INSERT] - Insert Time: {} | Insert Result: OK", timestamp);
                 }
-                catch (const std::exception &e) {
-                    spdlog::warn("[UNARY INSERT] - There was an exception or operation has timed-out: {}", e.what());
-                    toReturn.push_back(0);
-                    timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
-                }
             }
-        }
-        // NOT a debug mode
-        else {
-            for (int i = 0; i < N_ITERATION; i++) {
-                if (timedOut) {
-                    toReturn.push_back(0);
-                    continue;
+            catch (const std::exception &e) {
+                if (isDebug) {
+                    spdlog::warn("[UNARY INSERT] - There was an exception or operation has timed-out: {}", e.what());
                 }
-
-                // Dispatch insert
-                start = std::chrono::high_resolution_clock::now();
-                try {
-                    pqxx::work txn(conn);
-
-                    // Prepare parameters
-                    std::vector<std::string> params;
-
-                    // Timestamp
-                    unsigned long int timestamp = std::any_cast<unsigned long int>(insertData->at(i).at(0));
-                    params.push_back(fmt::format("to_timestamp({})", timestamp));
-
-                    // Other fields
-                    std::any currentMetric;
-                    for (int j = 1; j < insertData->at(i).size(); j++) {
-                        currentMetric = insertData->at(i).at(j);
-                        if (currentMetric.type() == typeid(std::string)) {
-                            params.push_back(fmt::format("'{}'", std::any_cast<std::string>(currentMetric)));
-                        }
-                        else if (currentMetric.type() == typeid(int)) {
-                            params.push_back(fmt::format("{}", std::any_cast<int>(currentMetric)));
-                        }
-                        else if (currentMetric.type() == typeid(double)) {
-                            params.push_back(fmt::format("{}", std::any_cast<double>(currentMetric)));
-                        }
-                    }
-
-                    // Execute the insert
-                    txn.exec(fmt::format(fmt::runtime(insertStmt), fmt::join(params, ", ")));
-                    txn.commit();
-
-                    end = std::chrono::high_resolution_clock::now();
-                    timeCost = end - start;
-                    toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
-                }
-                catch (const std::exception &e) {
-                    toReturn.push_back(0);
-                    timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
-                }
+                toReturn.push_back(0);
+                timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
             }
         }
     }
@@ -553,128 +408,61 @@ std::vector<double> TimescaleDB_Adapter::batchInsert_singleThread(std::string SE
     std::vector<double> toReturn;
     bool timedOut = false;
 
-    // Init TimescaleDB connection
     try {
         pqxx::connection conn(getConnectionString(SERVER_ADDR, SERVER_PORT, "bench_db"));
 
-        // Clock init
-        std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
-        std::chrono::duration<double> timeCost;
+        for (int i = 0; i < N_ITERATION; i++) {
+            if (timedOut) {
+                toReturn.push_back(0);
+                continue;
+            }
 
-        // Prepare the insert statement once
-        std::string insertStmt = prepareInsertStatement(insertData->at(0).size());
+            try {
+                pqxx::work txn(conn);
 
-        // DEBUG mode
-        if (isDebug) {
-            for (int i = 0; i < N_ITERATION; i++) {
-                if (timedOut) {
-                    spdlog::warn("[BATCH INSERT] - There was an exception or operation has timed-out");
-                    toReturn.push_back(0);
-                    continue;
-                }
+                std::string sql = "INSERT INTO bench_db VALUES ";
+                std::vector<std::string> rowTuples;
 
-                // Dispatch insert
-                start = std::chrono::high_resolution_clock::now();
-                try {
-                    pqxx::work txn(conn);
+                for (size_t j = 0; j < insertData->size(); j++) {
+                    std::vector<std::string> colValues;
 
-                    // For batch insert, we'll use multiple INSERT statements in a single transaction
-                    for (int j = 0; j < insertData->size(); j++) {
-                        // Prepare parameters
-                        std::vector<std::string> params;
+                    unsigned long int timestamp = std::any_cast<unsigned long int>(insertData->at(j).at(0));
+                    colValues.push_back(fmt::format("to_timestamp({})", timestamp));
 
-                        // Timestamp
-                        unsigned long int timestamp = std::any_cast<unsigned long int>(insertData->at(j).at(0));
-                        params.push_back(fmt::format("to_timestamp({})", timestamp));
-
-                        // Other fields
-                        std::any currentMetric;
-                        for (int k = 1; k < insertData->at(j).size(); k++) {
-                            currentMetric = insertData->at(j).at(k);
-                            if (currentMetric.type() == typeid(std::string)) {
-                                params.push_back(fmt::format("'{}'", std::any_cast<std::string>(currentMetric)));
-                            }
-                            else if (currentMetric.type() == typeid(int)) {
-                                params.push_back(fmt::format("{}", std::any_cast<int>(currentMetric)));
-                            }
-                            else if (currentMetric.type() == typeid(double)) {
-                                params.push_back(fmt::format("{}", std::any_cast<double>(currentMetric)));
-                            }
+                    std::any currentMetric;
+                    for (size_t k = 1; k < insertData->at(j).size(); k++) {
+                        currentMetric = insertData->at(j).at(k);
+                        if (currentMetric.type() == typeid(std::string)) {
+                            colValues.push_back(fmt::format("'{}'", std::any_cast<std::string>(currentMetric)));
                         }
-
-                        // Execute the insert
-                        txn.exec(fmt::format(fmt::runtime(insertStmt), fmt::join(params, ", ")));
+                        else if (currentMetric.type() == typeid(int)) {
+                            colValues.push_back(fmt::format("{}", std::any_cast<int>(currentMetric)));
+                        }
+                        else if (currentMetric.type() == typeid(double)) {
+                            colValues.push_back(fmt::format("{}", std::any_cast<double>(currentMetric)));
+                        }
                     }
 
-                    // Commit all inserts in one transaction
-                    txn.commit();
-
-                    end = std::chrono::high_resolution_clock::now();
-                    timeCost = end - start;
-                    toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
-
-                    // Debug
-                    spdlog::debug("[BATCH INSERT] - Insert Result: OK");
+                    rowTuples.push_back(fmt::format("({})", fmt::join(colValues, ", ")));
                 }
-                catch (const std::exception &e) {
-                    spdlog::warn("[BATCH INSERT] - There was an exception or operation has timed-out: {}", e.what());
-                    toReturn.push_back(0);
-                    timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
+                sql += fmt::format("{} ON CONFLICT (timestamp) DO NOTHING;", fmt::join(rowTuples, ", "));
+
+                auto start = std::chrono::high_resolution_clock::now();
+                txn.exec(sql);
+                txn.commit();
+                auto end = std::chrono::high_resolution_clock::now();
+
+                std::chrono::duration<double, std::milli> timeCost = end - start;
+                toReturn.push_back(timeCost.count());
+
+                if (isDebug) {
+                    spdlog::debug("[BATCH INSERT] - Bulk insert completed successfully. SQL: {}", sql);
                 }
             }
-        }
-        // NOT a debug mode
-        else {
-            for (int i = 0; i < N_ITERATION; i++) {
-                if (timedOut) {
-                    toReturn.push_back(0);
-                    continue;
-                }
-
-                // Dispatch insert
-                start = std::chrono::high_resolution_clock::now();
-                try {
-                    pqxx::work txn(conn);
-
-                    // For batch insert, we'll use multiple INSERT statements in a single transaction
-                    for (int j = 0; j < insertData->size(); j++) {
-                        // Prepare parameters
-                        std::vector<std::string> params;
-
-                        // Timestamp
-                        unsigned long int timestamp = std::any_cast<unsigned long int>(insertData->at(j).at(0));
-                        params.push_back(fmt::format("to_timestamp({})", timestamp));
-
-                        // Other fields
-                        std::any currentMetric;
-                        for (int k = 1; k < insertData->at(j).size(); k++) {
-                            currentMetric = insertData->at(j).at(k);
-                            if (currentMetric.type() == typeid(std::string)) {
-                                params.push_back(fmt::format("'{}'", std::any_cast<std::string>(currentMetric)));
-                            }
-                            else if (currentMetric.type() == typeid(int)) {
-                                params.push_back(fmt::format("{}", std::any_cast<int>(currentMetric)));
-                            }
-                            else if (currentMetric.type() == typeid(double)) {
-                                params.push_back(fmt::format("{}", std::any_cast<double>(currentMetric)));
-                            }
-                        }
-
-                        // Execute the insert
-                        txn.exec(fmt::format(fmt::runtime(insertStmt), fmt::join(params, ", ")));
-                    }
-
-                    // Commit all inserts in one transaction
-                    txn.commit();
-
-                    end = std::chrono::high_resolution_clock::now();
-                    timeCost = end - start;
-                    toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
-                }
-                catch (const std::exception &e) {
-                    toReturn.push_back(0);
-                    timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
-                }
+            catch (const std::exception &e) {
+                spdlog::warn("[BATCH INSERT] - Exception encountered: {}", e.what());
+                toReturn.push_back(0);
+                timedOut = true; // Flag subsequent iterations as timed out.
             }
         }
     }
@@ -684,6 +472,7 @@ std::vector<double> TimescaleDB_Adapter::batchInsert_singleThread(std::string SE
             toReturn.push_back(0);
         }
     }
+
     return toReturn;
 }
 
