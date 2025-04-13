@@ -239,6 +239,10 @@ std::vector<double> TimescaleDB_Adapter::rangeQuery_singleThread(std::string SER
                 toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
 
                 if (isDebug) {
+                    std::vector<std::string> resultVector;
+                    for (auto row : result) {
+                        resultVector.push_back(row["timestamp"].c_str());
+                    }
                     spdlog::debug("[RANGE QUERY] - From: {} to {} | Query Result: {}", queryStartTime, queryEndTime, fmt::join(resultVector, "\n"));
                 }
             }
@@ -302,6 +306,10 @@ std::vector<double> TimescaleDB_Adapter::batchQuery_singleThread(std::string SER
                 toReturn.push_back(std::chrono::duration<double, std::milli>(timeCost).count());
 
                 if (isDebug) {
+                    std::vector<std::string> resultVector;
+                    for (auto row : result) {
+                        resultVector.push_back(row["timestamp"].c_str());
+                    }
                     spdlog::debug("[BATCH QUERY] - Query Result: {}", fmt::join(resultVector, "\n"));
                 }
             }
