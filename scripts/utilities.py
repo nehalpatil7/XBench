@@ -8,9 +8,9 @@ from fabric import Connection
 
 marker = itertools.cycle((">", "o", "s", "^", "v", "p", "P", "d", "*"))
 
-def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNodes, nIter, batchIter, serverGroup, serverWorkingDir, user="cc", debug=False):
+def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNodes, nIter, batchIter, serverGroup, serverWorkingDir, user="cc"):
     # Running single client tests first (Thread: 1, 2, 4)
-    runWorkload_singleClient(EXPERIMENT_TYPE, [1, 2, 4], serverNode, serverPort, dbName, clientNodes[0], nIter, batchIter, serverGroup, serverWorkingDir, user, debug)
+    runWorkload_singleClient(EXPERIMENT_TYPE, [1, 2, 4], serverNode, serverPort, dbName, clientNodes[0], nIter, batchIter, serverGroup, serverWorkingDir, user)
 
     WORKLOAD_TYPE = EXPERIMENT_TYPE.split("_")[0]
     EXPERIMENT_TYPE = EXPERIMENT_TYPE[len(WORKLOAD_TYPE) + 1:]
@@ -47,10 +47,10 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
 
             if WORKLOAD_TYPE == "INSERT":
                 conn.put(f"../../scripts/insertBench.sh")
-                conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}", hide=True)
+                conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
             elif WORKLOAD_TYPE == "QUERY":
                 conn.put(f"../../scripts/queryBench.sh")
-                conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}", hide=True)
+                conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
             conn.close()
             print(f"[Benchmark: {totalClients}] [Client: {ip}] - Time now: {int(time.time())} | Delta: {epochTime - int(time.time())}")
 
@@ -59,7 +59,7 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
         time.sleep(60)
 
         # Checking for job completion with timeout
-        if not checkTmuxJobIsDone(serverGroup, debug=debug):
+        if not checkTmuxJobIsDone(serverGroup):
             print("Warning: Job may not have completed successfully")
 
         # Kill server monitoring
@@ -125,7 +125,7 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
                 time.sleep(5)
                 pass
 
-def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNode, nIter, batchIter, serverGroup, serverWorkingDir, user="cc", debug=False):
+def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNode, nIter, batchIter, serverGroup, serverWorkingDir, user="cc"):
     WORKLOAD_TYPE = EXPERIMENT_TYPE.split("_")[0]
     EXPERIMENT_TYPE = EXPERIMENT_TYPE[len(WORKLOAD_TYPE) + 1:]
 
@@ -154,10 +154,10 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
 
         if WORKLOAD_TYPE == "INSERT":
             conn.put(f"../../scripts/insertBench.sh")
-            conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}", hide=True)
+            conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
         elif WORKLOAD_TYPE == "QUERY":
             conn.put(f"../../scripts/queryBench.sh")
-            conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime} {debug}", hide=True)
+            conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
         conn.close()
         print(f"[Benchmark: {numThread}] [Client: {clientNode}] - Time now: {int(time.time())} | Delta: {epochTime - int(time.time())}")
 
@@ -166,7 +166,7 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
         time.sleep(60)
 
         # Checking for job completion with timeout
-        if not checkTmuxJobIsDone(serverGroup, debug=debug):
+        if not checkTmuxJobIsDone(serverGroup):
             print("Warning: Job may not have completed successfully")
 
         # Kill server monitoring
@@ -350,31 +350,25 @@ def poller(epochTime):
         time.sleep(1)
 
 
-def checkTmuxJobIsDone(connectionGroup, debug=False, timeout=300):
+def checkTmuxJobIsDone(connectionGroup, timeout=300):
     start_time = time.time()
 
     while True:
         try:
             if time.time() - start_time > timeout:
-                print("Warning: Job check timed out after", timeout, "seconds")
+                # print("Warning: Job check timed out after", timeout, "seconds")
                 return False
 
             results = connectionGroup.run("tmux ls", hide=True, warn=True)
             all_done = True
-
-            for conn, result in results.items():
+            for _, result in results.items():
                 if result.ok and result.stdout.strip():
-                    if debug:
-                        print(f"Active tmux sessions on {conn.host}: {result.stdout.strip()}")
                     all_done = False
                     break
-
             if all_done:
-                print("No active tmux sessions found - job may be complete")
                 return True
 
             time.sleep(10)
-
         except Exception as e:
             print(f"Error checking tmux status: {str(e)}")
             time.sleep(10)
