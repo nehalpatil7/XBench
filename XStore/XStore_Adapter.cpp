@@ -77,6 +77,30 @@ std::vector<double> XStore_Adapter::batchQuery(std::string SERVER_ADDR, std::str
     return timeCost;
 }
 
+std::vector<double> XStore_Adapter::aggMin(std::string SERVER_ADDR, std::string SERVER_PORT, short unsigned int NUM_THREAD, int N_ITERATION, std::vector<std::vector<std::vector<std::any>>> *queryData, std::string pattern, bool isDebug) {
+    BS::multi_future<std::vector<double>> multiFuture;
+    std::vector<std::vector<double>> nestedVector;
+
+    for (int i = 0; i < NUM_THREAD; i++) {
+        multiFuture.push_back(threadPool.submit(XStore_Adapter::aggMin_singleThread, SERVER_ADDR, SERVER_PORT, N_ITERATION, &queryData->at(i), isDebug));
+    }
+
+    // Wait till all threads finishes
+    for (std::vector<double> i : multiFuture.get()) {
+        nestedVector.push_back(i);
+    }
+
+    std::vector<double> timeCost;
+
+    // Flattening nested vector
+    for (int i = 0; i < nestedVector.size(); i++) {
+        // Write experiment result to CSV
+        writeCSV(fmt::format("QUERY-{}_Client-{}.csv", pattern, i), "Time taken (ms)", nestedVector.at(i));
+        std::move(nestedVector.at(i).begin(), nestedVector.at(i).end(), std::back_inserter(timeCost));
+    }
+    return timeCost;
+}
+
 std::vector<double> XStore_Adapter::unaryInsert(std::string SERVER_ADDR, std::string SERVER_PORT, short unsigned int NUM_THREAD, int N_ITERATION, std::vector<std::vector<std::vector<std::any>>> *insertData, std::string pattern, bool isDebug) {
     BS::multi_future<std::vector<double>> multiFuture;
     std::vector<std::vector<double>> nestedVector;
@@ -613,6 +637,59 @@ std::vector<double> XStore_Adapter::batchInsert_singleThread(std::string SERVER_
             toServer.Clear();
             batchInsertData->Clear();
             batchInsertRep.Clear();
+        }
+    }
+    return toReturn;
+}
+
+std::vector<double> XStore_Adapter::aggMin_singleThread(std::string SERVER_ADDR, std::string SERVER_PORT, int N_ITERATION, std::vector<std::vector<std::any>> *queryData, bool isDebug) {
+    std::vector<double> toReturn;
+
+    // Init client obj
+    XStore_Client xstoreClient;
+    xstoreClient.connect(SERVER_ADDR, SERVER_PORT);
+
+    // Clock init
+    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+    std::chrono::duration<double> timeCost;
+
+    // Query response placeholder
+    XStore_Proto::min_REP aggMinRep;
+    unsigned long int queryStartTime, queryEndTime, queryTargetColumn;
+
+    // DEBUG mode
+    if (isDebug) {
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+            queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
+            queryTargetColumn = std::any_cast<unsigned long int>(queryData->at(i).at(2));
+
+            // Dispatch query
+            start = std::chrono::high_resolution_clock::now();
+            xstoreClient.aggMin(queryStartTime, queryEndTime, "BENCH_DB", queryTargetColumn, &aggMinRep);
+            end = std::chrono::high_resolution_clock::now();
+            timeCost = end - start;
+            toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
+
+            // Debug
+            std::string debugMsg;
+            google::protobuf::util::MessageToJsonString(aggMinRep, &debugMsg);
+            spdlog::debug("[AGG MIN] - From: {} to {} | Query Result: {}", queryStartTime, queryEndTime, debugMsg);
+        }
+    }
+    // NOT a debug mode
+    else {
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+            queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
+            queryTargetColumn = std::any_cast<unsigned long int>(queryData->at(i).at(2));
+
+            // Dispatch query
+            start = std::chrono::high_resolution_clock::now();
+            xstoreClient.aggMin(queryStartTime, queryEndTime, "BENCH_DB", queryTargetColumn, &aggMinRep);
+            end = std::chrono::high_resolution_clock::now();
+            timeCost = end - start;
+            toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
         }
     }
     return toReturn;
