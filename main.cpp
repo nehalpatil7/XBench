@@ -387,7 +387,83 @@ int main(int argc, char const *argv[])
                 timeCost = XStore_Adapter::aggMin(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
             else if (TARGET_DB == "MONGODB") {
-                timeCost = MongoDB_Adapter::aggMin(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+                timeCost = MongoDB_Adapter::aggQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, "min", IS_DEBUG);
+            }
+            else if (TARGET_DB == "INFLUXDB") {
+
+            }
+        }
+
+        if (EXPERIMENT_TYPE == "MAX") {
+            spdlog::info("[AGGREGATE QUERY]        Target DB: {}", TARGET_DB);
+            spdlog::info("[AGGREGATE QUERY]             Type: {}", EXPERIMENT_TYPE);
+            spdlog::info("[AGGREGATE QUERY]       Iterations: {}", N_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY] Batch Iterations: {}", B_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY]           Thread: {}", NUM_THREAD);
+            spdlog::info("[AGGREGATE QUERY]        Invoke at: {}", INVOKE_AT);
+            spdlog::info("[AGGREGATE QUERY]            Debug: {}", IS_DEBUG);
+
+            // Read data from parquet file
+            std::vector<std::vector<std::vector<std::any>>> queryWorkload = dataManager.readAggQueryWorkload("AGG-MAX-QUERY_Client-", NUM_THREAD, N_ITERATIONS, B_ITERATIONS);
+
+            // Poll till
+            epochPoller(INVOKE_AT);
+
+            if (TARGET_DB == "XSTORE") {
+                timeCost = XStore_Adapter::aggMax(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
+            else if (TARGET_DB == "MONGODB") {
+                timeCost = MongoDB_Adapter::aggQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, "max", IS_DEBUG);
+            }
+            else if (TARGET_DB == "INFLUXDB") {
+
+            }
+        }
+        else if (EXPERIMENT_TYPE == "SUM") {
+            spdlog::info("[AGGREGATE QUERY]        Target DB: {}", TARGET_DB);
+            spdlog::info("[AGGREGATE QUERY]             Type: {}", EXPERIMENT_TYPE);
+            spdlog::info("[AGGREGATE QUERY]       Iterations: {}", N_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY] Batch Iterations: {}", B_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY]           Thread: {}", NUM_THREAD);
+            spdlog::info("[AGGREGATE QUERY]        Invoke at: {}", INVOKE_AT);
+            spdlog::info("[AGGREGATE QUERY]            Debug: {}", IS_DEBUG);
+
+            // Read data from parquet file
+            std::vector<std::vector<std::vector<std::any>>> queryWorkload = dataManager.readAggQueryWorkload("AGG-SUM-QUERY_Client-", NUM_THREAD, N_ITERATIONS, B_ITERATIONS);
+
+            // Poll till
+            epochPoller(INVOKE_AT);
+
+            if (TARGET_DB == "XSTORE") {
+                timeCost = XStore_Adapter::aggSum(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
+            else if (TARGET_DB == "MONGODB") {
+                timeCost = MongoDB_Adapter::aggQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, "sum", IS_DEBUG);
+            }
+            else if (TARGET_DB == "INFLUXDB") {
+
+            }
+        }
+        else if (EXPERIMENT_TYPE == "AVG") {
+            spdlog::info("[AGGREGATE QUERY]        Target DB: {}", TARGET_DB);
+            spdlog::info("[AGGREGATE QUERY]             Type: {}", EXPERIMENT_TYPE);
+            spdlog::info("[AGGREGATE QUERY]       Iterations: {}", N_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY] Batch Iterations: {}", B_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY]           Thread: {}", NUM_THREAD);
+            spdlog::info("[AGGREGATE QUERY]        Invoke at: {}", INVOKE_AT);
+            spdlog::info("[AGGREGATE QUERY]            Debug: {}", IS_DEBUG);
+
+            // Read data from parquet file
+            std::vector<std::vector<std::vector<std::any>>> queryWorkload = dataManager.readAggQueryWorkload("AGG-AVG-QUERY_Client-", NUM_THREAD, N_ITERATIONS, B_ITERATIONS);
+
+            // Poll till
+            epochPoller(INVOKE_AT);
+
+            if (TARGET_DB == "XSTORE") {
+                timeCost = XStore_Adapter::aggAvg(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
+            else if (TARGET_DB == "MONGODB") {
+                timeCost = MongoDB_Adapter::aggQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, "avg", IS_DEBUG);
             }
             else if (TARGET_DB == "INFLUXDB") {
 

@@ -358,7 +358,7 @@ class ParquetOPS:
         if batchIter is None:
             batchIter = 10
 
-        if queryType == 'AGG_MIN':
+        if queryType in ['AGG_MIN', 'AGG_MAX', 'AGG_SUM', 'AGG_AVG']:
             for i in range(nClients):
                 sTime = [random.randrange(startTime, endTime - (sampleSize * batchIter)) + (j * sampleSize) for j in range(batchIter)]
                 eTime = [j + sampleSize for j in sTime]
@@ -371,7 +371,7 @@ class ParquetOPS:
                 toWrite['targetCol'] = toWrite['targetCol'].astype(np.uint64)
 
                 # Write to file
-                fName = f'AGG-MIN-QUERY_Client-{i}_{batchIter}-{sampleSize}_{startTime}-{endTime}.parquet'
+                fName = f'AGG-{queryType.split("_")[1]}-QUERY_Client-{i}_{batchIter}-{sampleSize}_{startTime}-{endTime}.parquet'
                 toWrite.to_parquet(fName, engine='fastparquet', compression='zstd')
                 print(f'File written: {fName}')
 

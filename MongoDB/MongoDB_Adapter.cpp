@@ -134,12 +134,12 @@ std::vector<double> MongoDB_Adapter::batchInsert(std::string SERVER_ADDR, std::s
     return timeCost;
 }
 
-std::vector<double> MongoDB_Adapter::aggMin(std::string SERVER_ADDR, std::string SERVER_PORT, short unsigned int NUM_THREAD, int N_ITERATION, std::vector<std::vector<std::vector<std::any>>> *queryData, std::string pattern, bool isDebug) {
+std::vector<double> MongoDB_Adapter::aggQuery(std::string SERVER_ADDR, std::string SERVER_PORT, short unsigned int NUM_THREAD, int N_ITERATION, std::vector<std::vector<std::vector<std::any>>> *queryData, std::string pattern, bool isDebug) {
     BS::multi_future<std::vector<double>> multiFuture;
     std::vector<std::vector<double>> nestedVector;
 
     for (int i = 0; i < NUM_THREAD; i++) {
-        multiFuture.push_back(threadPool.submit(MongoDB_Adapter::aggMin_singleThread, SERVER_ADDR, SERVER_PORT, N_ITERATION, &queryData->at(i), isDebug));
+        multiFuture.push_back(threadPool.submit(MongoDB_Adapter::aggQuery_singleThread, SERVER_ADDR, SERVER_PORT, N_ITERATION, &queryData->at(i), pattern, isDebug));
     }
 
     // Wait till all threads finishes
@@ -152,7 +152,7 @@ std::vector<double> MongoDB_Adapter::aggMin(std::string SERVER_ADDR, std::string
     // Flattening nested vector
     for (int i = 0; i < nestedVector.size(); i++) {
         // Write experiment result to CSV
-        writeCSV(fmt::format("MIN-{}_Client-{}.csv", pattern, i), "Time taken (ms)", nestedVector.at(i));
+        writeCSV(fmt::format("AGG-{}_Client-{}.csv", pattern, i), "Time taken (ms)", nestedVector.at(i));
         std::move(nestedVector.at(i).begin(), nestedVector.at(i).end(), std::back_inserter(timeCost));
     }
     return timeCost;
@@ -604,9 +604,11 @@ std::vector<double> MongoDB_Adapter::batchInsert_singleThread(std::string SERVER
     return toReturn;
 }
 
-std::vector<double> MongoDB_Adapter::aggMin_singleThread(std::string SERVER_ADDR, std::string SERVER_PORT, int N_ITERATION, std::vector<std::vector<std::any>> *queryData, bool isDebug) {
+std::vector<double> MongoDB_Adapter::aggQuery_singleThread(std::string SERVER_ADDR, std::string SERVER_PORT, int N_ITERATION, std::vector<std::vector<std::any>> *queryData, std::string aggType, bool isDebug) {
     std::vector<double> toReturn;
     bool timedOut = false;
+    std::string aggTypeUpperCase = aggType;
+    toUpperCase(aggTypeUpperCase.begin(), aggTypeUpperCase.end());
 
     // Init MongoDB instances
     mongocxx::uri uri(fmt::format("mongodb://{}:{}/?socketTimeoutMS=120000", SERVER_ADDR, SERVER_PORT));
@@ -644,15 +646,15 @@ std::vector<double> MongoDB_Adapter::aggMin_singleThread(std::string SERVER_ADDR
             );
             p.group(bsoncxx::builder::basic::make_document(
                 bsoncxx::builder::basic::kvp("_id", 0),
-                    bsoncxx::builder::basic::kvp("minValue",
+                    bsoncxx::builder::basic::kvp(fmt::format("{}Value", aggType),
                         bsoncxx::builder::basic::make_document(
-                            bsoncxx::builder::basic::kvp("$min", fmt::format("$col{}", queryTargetColumn))
+                            bsoncxx::builder::basic::kvp(fmt::format("${}", aggType), fmt::format("$col{}", queryTargetColumn))
                         )
                     )
             ));
 
             if (timedOut) {
-                spdlog::warn("[AGG MIN] - There was an exception or operation has timed-out");
+                spdlog::warn("[AGG {}] - There was an exception or operation has timed-out", aggTypeUpperCase);
                 toReturn.push_back(0);
                 continue;
             }
@@ -674,10 +676,10 @@ std::vector<double> MongoDB_Adapter::aggMin_singleThread(std::string SERVER_ADDR
                 toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
 
                 // Debug
-                spdlog::debug("[AGG MIN] - From: {} to {} | Aggregate Result: {}", queryStartTime, queryEndTime, fmt::join(docVector, "\n"));
+                spdlog::debug("[AGG {}] - From: {} to {} | Aggregate Result: {}", aggTypeUpperCase, queryStartTime, queryEndTime, fmt::join(docVector, "\n"));
             }
             catch (...) {
-                spdlog::warn("[AGG MIN] - There was an exception or operation has timed-out");
+                spdlog::warn("[AGG {}] - There was an exception or operation has timed-out", aggTypeUpperCase);
                 toReturn.push_back(0);
                 timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
             }
@@ -704,8 +706,9 @@ std::vector<double> MongoDB_Adapter::aggMin_singleThread(std::string SERVER_ADDR
             );
             p.group(bsoncxx::builder::basic::make_document(
                 bsoncxx::builder::basic::kvp("_id", 0),
-                    bsoncxx::builder::basic::kvp("minValue", bsoncxx::builder::basic::make_document(
-                        bsoncxx::builder::basic::kvp("$min", fmt::format("$col{}", queryTargetColumn))
+                    bsoncxx::builder::basic::kvp(fmt::format("{}Value", aggType),
+                        bsoncxx::builder::basic::make_document(
+                            bsoncxx::builder::basic::kvp(fmt::format("${}", aggType), fmt::format("$col{}", queryTargetColumn))
                     )
                 )
             ));

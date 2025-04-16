@@ -101,6 +101,78 @@ std::vector<double> XStore_Adapter::aggMin(std::string SERVER_ADDR, std::string 
     return timeCost;
 }
 
+std::vector<double> XStore_Adapter::aggMax(std::string SERVER_ADDR, std::string SERVER_PORT, short unsigned int NUM_THREAD, int N_ITERATION, std::vector<std::vector<std::vector<std::any>>> *queryData, std::string pattern, bool isDebug) {
+    BS::multi_future<std::vector<double>> multiFuture;
+    std::vector<std::vector<double>> nestedVector;
+
+    for (int i = 0; i < NUM_THREAD; i++) {
+        multiFuture.push_back(threadPool.submit(XStore_Adapter::aggMax_singleThread, SERVER_ADDR, SERVER_PORT, N_ITERATION, &queryData->at(i), isDebug));
+    }
+
+    // Wait till all threads finishes
+    for (std::vector<double> i : multiFuture.get()) {
+        nestedVector.push_back(i);
+    }
+
+    std::vector<double> timeCost;
+
+    // Flattening nested vector
+    for (int i = 0; i < nestedVector.size(); i++) {
+        // Write experiment result to CSV
+        writeCSV(fmt::format("QUERY-{}_Client-{}.csv", pattern, i), "Time taken (ms)", nestedVector.at(i));
+        std::move(nestedVector.at(i).begin(), nestedVector.at(i).end(), std::back_inserter(timeCost));
+    }
+    return timeCost;
+}
+
+std::vector<double> XStore_Adapter::aggSum(std::string SERVER_ADDR, std::string SERVER_PORT, short unsigned int NUM_THREAD, int N_ITERATION, std::vector<std::vector<std::vector<std::any>>> *queryData, std::string pattern, bool isDebug) {
+    BS::multi_future<std::vector<double>> multiFuture;
+    std::vector<std::vector<double>> nestedVector;
+
+    for (int i = 0; i < NUM_THREAD; i++) {
+        multiFuture.push_back(threadPool.submit(XStore_Adapter::aggSum_singleThread, SERVER_ADDR, SERVER_PORT, N_ITERATION, &queryData->at(i), isDebug));
+    }
+
+    // Wait till all threads finishes
+    for (std::vector<double> i : multiFuture.get()) {
+        nestedVector.push_back(i);
+    }
+
+    std::vector<double> timeCost;
+
+    // Flattening nested vector
+    for (int i = 0; i < nestedVector.size(); i++) {
+        // Write experiment result to CSV
+        writeCSV(fmt::format("QUERY-{}_Client-{}.csv", pattern, i), "Time taken (ms)", nestedVector.at(i));
+        std::move(nestedVector.at(i).begin(), nestedVector.at(i).end(), std::back_inserter(timeCost));
+    }
+    return timeCost;
+}
+
+std::vector<double> XStore_Adapter::aggAvg(std::string SERVER_ADDR, std::string SERVER_PORT, short unsigned int NUM_THREAD, int N_ITERATION, std::vector<std::vector<std::vector<std::any>>> *queryData, std::string pattern, bool isDebug) {
+    BS::multi_future<std::vector<double>> multiFuture;
+    std::vector<std::vector<double>> nestedVector;
+
+    for (int i = 0; i < NUM_THREAD; i++) {
+        multiFuture.push_back(threadPool.submit(XStore_Adapter::aggAvg_singleThread, SERVER_ADDR, SERVER_PORT, N_ITERATION, &queryData->at(i), isDebug));
+    }
+
+    // Wait till all threads finishes
+    for (std::vector<double> i : multiFuture.get()) {
+        nestedVector.push_back(i);
+    }
+
+    std::vector<double> timeCost;
+
+    // Flattening nested vector
+    for (int i = 0; i < nestedVector.size(); i++) {
+        // Write experiment result to CSV
+        writeCSV(fmt::format("QUERY-{}_Client-{}.csv", pattern, i), "Time taken (ms)", nestedVector.at(i));
+        std::move(nestedVector.at(i).begin(), nestedVector.at(i).end(), std::back_inserter(timeCost));
+    }
+    return timeCost;
+}
+
 std::vector<double> XStore_Adapter::unaryInsert(std::string SERVER_ADDR, std::string SERVER_PORT, short unsigned int NUM_THREAD, int N_ITERATION, std::vector<std::vector<std::vector<std::any>>> *insertData, std::string pattern, bool isDebug) {
     BS::multi_future<std::vector<double>> multiFuture;
     std::vector<std::vector<double>> nestedVector;
@@ -687,6 +759,165 @@ std::vector<double> XStore_Adapter::aggMin_singleThread(std::string SERVER_ADDR,
             // Dispatch query
             start = std::chrono::high_resolution_clock::now();
             xstoreClient.aggMin(queryStartTime, queryEndTime, "BENCH_DB", queryTargetColumn, &aggMinRep);
+            end = std::chrono::high_resolution_clock::now();
+            timeCost = end - start;
+            toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
+        }
+    }
+    return toReturn;
+}
+
+std::vector<double> XStore_Adapter::aggMax_singleThread(std::string SERVER_ADDR, std::string SERVER_PORT, int N_ITERATION, std::vector<std::vector<std::any>> *queryData, bool isDebug) {
+    std::vector<double> toReturn;
+
+    // Init client obj
+    XStore_Client xstoreClient;
+    xstoreClient.connect(SERVER_ADDR, SERVER_PORT);
+
+    // Clock init
+    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+    std::chrono::duration<double> timeCost;
+
+    // Query response placeholder
+    XStore_Proto::max_REP aggMaxRep;
+    unsigned long int queryStartTime, queryEndTime, queryTargetColumn;
+
+    // DEBUG mode
+    if (isDebug) {
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+            queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
+            queryTargetColumn = std::any_cast<unsigned long int>(queryData->at(i).at(2));
+
+            // Dispatch query
+            start = std::chrono::high_resolution_clock::now();
+            xstoreClient.aggMax(queryStartTime, queryEndTime, "BENCH_DB", queryTargetColumn, &aggMaxRep);
+            end = std::chrono::high_resolution_clock::now();
+            timeCost = end - start;
+            toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
+
+            // Debug
+            std::string debugMsg;
+            google::protobuf::util::MessageToJsonString(aggMaxRep, &debugMsg);
+            spdlog::debug("[AGG MAX] - From: {} to {} | Query Result: {}", queryStartTime, queryEndTime, debugMsg);
+        }
+    }
+    // NOT a debug mode
+    else {
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+            queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
+            queryTargetColumn = std::any_cast<unsigned long int>(queryData->at(i).at(2));
+
+            // Dispatch query
+            start = std::chrono::high_resolution_clock::now();
+            xstoreClient.aggMax(queryStartTime, queryEndTime, "BENCH_DB", queryTargetColumn, &aggMaxRep);
+            end = std::chrono::high_resolution_clock::now();
+            timeCost = end - start;
+            toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
+        }
+    }
+    return toReturn;
+}
+
+std::vector<double> XStore_Adapter::aggSum_singleThread(std::string SERVER_ADDR, std::string SERVER_PORT, int N_ITERATION, std::vector<std::vector<std::any>> *queryData, bool isDebug) {
+    std::vector<double> toReturn;
+
+    // Init client obj
+    XStore_Client xstoreClient;
+    xstoreClient.connect(SERVER_ADDR, SERVER_PORT);
+
+    // Clock init
+    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+    std::chrono::duration<double> timeCost;
+
+    // Query response placeholder
+    XStore_Proto::sum_REP aggSumRep;
+    unsigned long int queryStartTime, queryEndTime, queryTargetColumn;
+
+    // DEBUG mode
+    if (isDebug) {
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+            queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
+            queryTargetColumn = std::any_cast<unsigned long int>(queryData->at(i).at(2));
+
+            // Dispatch query
+            start = std::chrono::high_resolution_clock::now();
+            xstoreClient.aggSum(queryStartTime, queryEndTime, "BENCH_DB", queryTargetColumn, &aggSumRep);
+            end = std::chrono::high_resolution_clock::now();
+            timeCost = end - start;
+            toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
+
+            // Debug
+            std::string debugMsg;
+            google::protobuf::util::MessageToJsonString(aggSumRep, &debugMsg);
+            spdlog::debug("[AGG SUM] - From: {} to {} | Query Result: {}", queryStartTime, queryEndTime, debugMsg);
+        }
+    }
+    // NOT a debug mode
+    else {
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+            queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
+            queryTargetColumn = std::any_cast<unsigned long int>(queryData->at(i).at(2));
+
+            // Dispatch query
+            start = std::chrono::high_resolution_clock::now();
+            xstoreClient.aggSum(queryStartTime, queryEndTime, "BENCH_DB", queryTargetColumn, &aggSumRep);
+            end = std::chrono::high_resolution_clock::now();
+            timeCost = end - start;
+            toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
+        }
+    }
+    return toReturn;
+}
+
+std::vector<double> XStore_Adapter::aggAvg_singleThread(std::string SERVER_ADDR, std::string SERVER_PORT, int N_ITERATION, std::vector<std::vector<std::any>> *queryData, bool isDebug) {
+    std::vector<double> toReturn;
+
+    // Init client obj
+    XStore_Client xstoreClient;
+    xstoreClient.connect(SERVER_ADDR, SERVER_PORT);
+
+    // Clock init
+    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+    std::chrono::duration<double> timeCost;
+
+    // Query response placeholder
+    XStore_Proto::avg_REP aggAvgRep;
+    unsigned long int queryStartTime, queryEndTime, queryTargetColumn;
+
+    // DEBUG mode
+    if (isDebug) {
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+            queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
+            queryTargetColumn = std::any_cast<unsigned long int>(queryData->at(i).at(2));
+
+            // Dispatch query
+            start = std::chrono::high_resolution_clock::now();
+            xstoreClient.aggAvg(queryStartTime, queryEndTime, "BENCH_DB", queryTargetColumn, &aggAvgRep);
+            end = std::chrono::high_resolution_clock::now();
+            timeCost = end - start;
+            toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
+
+            // Debug
+            std::string debugMsg;
+            google::protobuf::util::MessageToJsonString(aggAvgRep, &debugMsg);
+            spdlog::debug("[AGG AVG] - From: {} to {} | Query Result: {}", queryStartTime, queryEndTime, debugMsg);
+        }
+    }
+        // NOT a debug mode
+    else {
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+            queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
+            queryTargetColumn = std::any_cast<unsigned long int>(queryData->at(i).at(2));
+
+            // Dispatch query
+            start = std::chrono::high_resolution_clock::now();
+            xstoreClient.aggAvg(queryStartTime, queryEndTime, "BENCH_DB", queryTargetColumn, &aggAvgRep);
             end = std::chrono::high_resolution_clock::now();
             timeCost = end - start;
             toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
