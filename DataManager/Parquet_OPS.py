@@ -18,6 +18,7 @@ import XStore_pb2 as XStore_Proto
 import pymongo                          # pip3 install pymongo
 from pymongo import MongoClient
 from influxdb import InfluxDBClient     # pip3 install influxdb
+import psycopg2                         # pip3 install psycopg2-binary
 
 # pd.set_option('display.max_columns', None)
 # pd.set_option('expand_frame_repr', False)
@@ -175,6 +176,7 @@ class ParquetOPS:
                 else:
                     print(f"Error on inserted into DB")
                     exit(1)
+
         elif db_name == "INFLUXDB":
             influxClient = InfluxDBClient(ip_address, int(port_number), database="BENCH_DB", gzip=True)
 
@@ -199,6 +201,81 @@ class ParquetOPS:
                 else:
                     print(f"Error on inserted into DB")
                     exit(1)
+
+        elif db_name == "TIMESCALEDB":
+            # Connect to PostgreSQL/TimescaleDB
+            conn = psycopg2.connect(
+                host=ip_address,
+                port=port_number,
+                database="postgres",
+                user="postgres",
+                password="postgres"
+            )
+            conn.autocommit = True
+            cursor = conn.cursor()
+
+            # Drop database if exists and create new one
+            cursor.execute("DROP DATABASE IF EXISTS BENCH_DB")
+            cursor.execute("CREATE DATABASE BENCH_DB")
+
+            # Close connection to postgres database
+            cursor.close()
+            conn.close()
+
+            # Connect to the new database
+            conn = psycopg2.connect(
+                host=ip_address,
+                port=port_number,
+                database="BENCH_DB",
+                user="postgres",
+                password="postgres"
+            )
+            conn.autocommit = True
+            cursor = conn.cursor()
+
+            # Create TimescaleDB extension
+            cursor.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")
+
+            # Get column names from the first batch
+            first_batch = next(masterDF.iter_batches(batch_size=1))
+            first_df = first_batch.to_pandas()
+            columns = first_df.columns.tolist()
+
+            # Create table with appropriate columns
+            create_table_sql = "CREATE TABLE BENCH_DB ("
+            create_table_sql += "timestamp TIMESTAMPTZ NOT NULL, "
+
+            for col in columns[1:]:  # Skip timestamp column as it's already added
+                create_table_sql += f"{col} TEXT, "
+
+            create_table_sql = create_table_sql.rstrip(", ") + ")"
+            cursor.execute(create_table_sql)
+
+            # Convert to hypertable
+            cursor.execute("SELECT create_hypertable('BENCH_DB', 'timestamp')")
+
+            # Insert data in batches
+            for df in masterDF.iter_batches(batch_size=batchSize):
+                tempDF = df.to_pandas()
+
+                # Convert timestamp to datetime
+                tempDF['timestamp'] = pd.to_datetime(tempDF['timestamp'], unit='s')
+
+                # Prepare insert statement
+                placeholders = ', '.join(['%s'] * len(columns))
+                insert_sql = f"INSERT INTO BENCH_DB ({', '.join(columns)}) VALUES ({placeholders})"
+
+                # Convert DataFrame to list of tuples for batch insert
+                values = [tuple(x) for x in tempDF.values]
+
+                # Execute batch insert
+                cursor.executemany(insert_sql, values)
+
+                print(f"Inserted {len(values)} rows into TimescaleDB")
+
+            # Close connection
+            cursor.close()
+            conn.close()
 
     def createBasicQuery(self, offset, sampleSize, nClients, startTime, endTime, queryType='UNARY_SEQ', batchIter=None):
         # Batch size default
@@ -390,7 +467,7 @@ if __name__ == '__main__':
 
     #   INGEST ALL
     ingestAll = subParser.add_parser('ingestAll', add_help=True, description='Data ingestor for benchmarking suite')
-    ingestAll.add_argument('-d', '--db_name', type=str, required=True, help='DB name', choices=['XSTORE', 'MONGODB', 'INFLUXDB'])
+    ingestAll.add_argument('-d', '--db_name', type=str, required=True, help='DB name', choices=['XSTORE', 'MONGODB', 'INFLUXDB', 'TIMESCALEDB'])
     ingestAll.add_argument('-i', '--ip_address', type=str, required=True, help='IP address of DB server')
     ingestAll.add_argument('-p', '--port_number', type=int, required=True, help='Port number of DB server')
     ingestAll.add_argument('-b', '--batch_size', type=int, required=True, help='Number of record per batch')

@@ -261,7 +261,8 @@ int main(int argc, char const *argv[])
             }
             else if (TARGET_DB == "INFLUXDB") {
                 timeCost = InfluxDB_Adapter::rangeQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
-            }else if (TARGET_DB == "TIMESCALEDB") {
+            }
+            else if (TARGET_DB == "TIMESCALEDB") {
                 timeCost = TimescaleDB_Adapter::rangeQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
             }
         }

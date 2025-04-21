@@ -34,4 +34,14 @@ elif [ "$DB_NAME" == "InfluxDB" ]; then
 
     # Fetch experiment data from ObjectStore
     tmux send-keys -t "RestoreDB" "wget -qO- ${defaultURL} | tar xvS --zstd && influxd restore -portable InfluxDB_BENCH_DB && sudo rm -r InfluxDB_BENCH_DB && tmux kill-server" C-m
+
+elif [ "$DB_NAME" == "TimescaleDB" ]; then
+    # Drop and recreate the database using the 'postgres' user
+    dropdb --if-exists -p 9493 -U postgres bench_db
+    createdb -p 9493 -U postgres bench_db
+
+    # Fetch experiment data and restore using pg_restore as 'postgres' user
+    # Assumes the .tar.zst contains a single pg_dump custom format file
+    tmux send-keys -t "RestoreDB" "wget -qO- ${defaultURL} | tar xvSO --zstd | pg_restore -p 9493 -U postgres --no-owner --no-privileges -d bench_db && tmux kill-server" C-m
+
 fi
