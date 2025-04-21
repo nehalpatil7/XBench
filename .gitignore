@@ -2,6 +2,7 @@ xbench_env/
 build/
 test.py
 scripts/__pycache__/
+DataManager/__pycache__/
 
 # Results
 Drivers/*/TIMESCALEDB_*_*_*/

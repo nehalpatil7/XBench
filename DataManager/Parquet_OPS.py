@@ -203,7 +203,7 @@ class ParquetOPS:
                     exit(1)
 
         elif db_name == "TIMESCALEDB":
-            # Connect to PostgreSQL/TimescaleDB
+            # Connect to PostgreSQL
             conn = psycopg2.connect(
                 host=ip_address,
                 port=port_number,
@@ -213,12 +213,8 @@ class ParquetOPS:
             )
             conn.autocommit = True
             cursor = conn.cursor()
-
-            # Drop database if exists and create new one
-            cursor.execute("DROP DATABASE IF EXISTS BENCH_DB")
-            cursor.execute("CREATE DATABASE BENCH_DB")
-
-            # Close connection to postgres database
+            cursor.execute("DROP DATABASE IF EXISTS bench_db")
+            cursor.execute("CREATE DATABASE bench_db")
             cursor.close()
             conn.close()
 
@@ -226,9 +222,9 @@ class ParquetOPS:
             conn = psycopg2.connect(
                 host=ip_address,
                 port=port_number,
-                database="BENCH_DB",
+                database="bench_db",
                 user="postgres",
-                password="postgres"
+                password="postgres",
             )
             conn.autocommit = True
             cursor = conn.cursor()
@@ -241,39 +237,29 @@ class ParquetOPS:
             first_df = first_batch.to_pandas()
             columns = first_df.columns.tolist()
 
-            # Create table with appropriate columns
-            create_table_sql = "CREATE TABLE BENCH_DB ("
+            create_table_sql = "CREATE TABLE bench_db ("
             create_table_sql += "timestamp TIMESTAMPTZ NOT NULL, "
 
-            for col in columns[1:]:  # Skip timestamp column as it's already added
+            for col in columns[1:]:
                 create_table_sql += f"{col} TEXT, "
 
             create_table_sql = create_table_sql.rstrip(", ") + ")"
             cursor.execute(create_table_sql)
 
             # Convert to hypertable
-            cursor.execute("SELECT create_hypertable('BENCH_DB', 'timestamp')")
+            cursor.execute("SELECT create_hypertable('bench_db', 'timestamp')")
 
-            # Insert data in batches
             for df in masterDF.iter_batches(batch_size=batchSize):
                 tempDF = df.to_pandas()
 
-                # Convert timestamp to datetime
                 tempDF['timestamp'] = pd.to_datetime(tempDF['timestamp'], unit='s')
-
-                # Prepare insert statement
                 placeholders = ', '.join(['%s'] * len(columns))
-                insert_sql = f"INSERT INTO BENCH_DB ({', '.join(columns)}) VALUES ({placeholders})"
+                insert_sql = f"INSERT INTO bench_db ({', '.join(columns)}) VALUES ({placeholders})"
 
-                # Convert DataFrame to list of tuples for batch insert
                 values = [tuple(x) for x in tempDF.values]
-
-                # Execute batch insert
                 cursor.executemany(insert_sql, values)
-
                 print(f"Inserted {len(values)} rows into TimescaleDB")
 
-            # Close connection
             cursor.close()
             conn.close()
 
