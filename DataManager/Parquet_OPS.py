@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import io
 import random
 import sys
 import argparse
@@ -22,6 +23,38 @@ import psycopg2                         # pip3 install psycopg2-binary
 
 # pd.set_option('display.max_columns', None)
 # pd.set_option('expand_frame_repr', False)
+
+
+# Ingest row group into TimescaleDB
+def ingest_row_group_pg(args):
+    idx, filename, db_config = args
+
+    parquet_file = pq.ParquetFile(filename)
+    table = parquet_file.read_row_group(idx)
+    df = table.to_pandas()
+
+    total_rows = len(df)
+    batch_size = max(1, total_rows // 2)
+
+    conn = psycopg2.connect(**db_config)
+    conn.autocommit = True
+    cursor = conn.cursor()
+
+    for start in range(0, total_rows, batch_size):
+        chunk = df.iloc[start : start + batch_size]
+        output = io.StringIO()
+        chunk.to_csv(output, header=False, index=False)
+        output.seek(0)
+        cursor.copy_expert("COPY bench_db FROM STDIN WITH (FORMAT csv)", output)
+
+    cursor.close()
+    conn.close()
+
+    print(
+        f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Row group {idx + 1} ingested.",
+        flush=True,
+    )
+
 
 class ParquetOPS:
     def __init__(self):
@@ -203,65 +236,26 @@ class ParquetOPS:
                     exit(1)
 
         elif db_name == "TIMESCALEDB":
-            # Connect to PostgreSQL
-            conn = psycopg2.connect(
-                host=ip_address,
-                port=port_number,
-                database="postgres",
-                user="postgres",
-                password="postgres"
+            log_file_path = "ingest.log"
+            open(log_file_path, "a").close()
+
+            db_config = {
+                "host": ip_address,
+                "port": port_number,
+                "user": "postgres",
+                "dbname": "bench_db",
+            }
+
+            parquet_file = pq.ParquetFile(filename)
+            num_row_groups = parquet_file.num_row_groups
+
+            for i in range(num_row_groups):
+                ingest_row_group_pg((i, filename, db_config))
+
+            print(
+                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] All row groups successfully ingested into TimescaleDB.",
+                flush=True,
             )
-            conn.autocommit = True
-            cursor = conn.cursor()
-            cursor.execute("DROP DATABASE IF EXISTS bench_db")
-            cursor.execute("CREATE DATABASE bench_db")
-            cursor.close()
-            conn.close()
-
-            # Connect to the new database
-            conn = psycopg2.connect(
-                host=ip_address,
-                port=port_number,
-                database="bench_db",
-                user="postgres",
-                password="postgres",
-            )
-            conn.autocommit = True
-            cursor = conn.cursor()
-
-            # Create TimescaleDB extension
-            cursor.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")
-
-            # Get column names from the first batch
-            first_batch = next(masterDF.iter_batches(batch_size=1))
-            first_df = first_batch.to_pandas()
-            columns = first_df.columns.tolist()
-
-            create_table_sql = "CREATE TABLE bench_db ("
-            create_table_sql += "timestamp TIMESTAMPTZ NOT NULL, "
-
-            for col in columns[1:]:
-                create_table_sql += f"{col} TEXT, "
-
-            create_table_sql = create_table_sql.rstrip(", ") + ")"
-            cursor.execute(create_table_sql)
-
-            # Convert to hypertable
-            cursor.execute("SELECT create_hypertable('bench_db', 'timestamp')")
-
-            for df in masterDF.iter_batches(batch_size=batchSize):
-                tempDF = df.to_pandas()
-
-                tempDF['timestamp'] = pd.to_datetime(tempDF['timestamp'], unit='s')
-                placeholders = ', '.join(['%s'] * len(columns))
-                insert_sql = f"INSERT INTO bench_db ({', '.join(columns)}) VALUES ({placeholders})"
-
-                values = [tuple(x) for x in tempDF.values]
-                cursor.executemany(insert_sql, values)
-                print(f"Inserted {len(values)} rows into TimescaleDB")
-
-            cursor.close()
-            conn.close()
 
     def createBasicQuery(self, offset, sampleSize, nClients, startTime, endTime, queryType='UNARY_SEQ', batchIter=None):
         # Batch size default
