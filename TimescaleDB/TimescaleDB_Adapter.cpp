@@ -28,7 +28,6 @@ std::vector<double> TimescaleDB_Adapter::unaryQuery(std::string SERVER_ADDR, std
     return timeCost;
 }
 
-
 std::vector<double> TimescaleDB_Adapter::rangeQuery(std::string SERVER_ADDR, std::string SERVER_PORT, short unsigned int NUM_THREAD, int N_ITERATION, std::vector<std::vector<std::vector<std::any>>> *queryData, std::string pattern, bool isDebug) {
     BS::multi_future<std::vector<double>> multiFuture;
     std::vector<std::vector<double>> nestedVector;
