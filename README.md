@@ -59,6 +59,7 @@ Advisor: Ioan Raicu (iraicu@iit.edu)
 [//]: # (* [Data Structure]&#40;https://gitlab.com/lvn2007/XStore/-/wikis/Data%20Structure&#41;)
 
 # Notes
+
 <details open><summary>To tar a backup:</summary>
 
 ```console
@@ -98,4 +99,72 @@ sudo tar -I "zstd -T0 -19" -cSvf MongoDB_BENCH_DB.tar.zst MongoDB_BENCH_DB
     influxd backup -portable -db BENCH_DB -host 127.0.0.1:9492 InfluxDB_BENCH_DB
     influxd restore -portable -db BENCH_DB -host 127.0.0.1:9492 InfluxDB_BENCH_DB
     ```
+</details>
+
+<details open><summary>To generate synthetic data</summary>
+
+```console
+python3 Parquet_OPS.py generate -t numeric -s 946684800 -e 1262303999 -c 128 -o benchData.parquet
+```
+
+</details>
+
+<details open><summary>To generate workload datasets:</summary>
+
+Specifications:
+- [1, 2, 4, 8, 16, 32] threads each node
+- 8 client nodes
+
+* UNARY QUERY - SEQ  
+```console
+python3 Parquet_OPS.py queryWorkload -t UNARY_SEQ -o 0 -s 1000 -n 32 -st 946684800 -et 1262303999 -b 0
+python3 Parquet_OPS.py queryWorkload -t UNARY_SEQ -o 32000 -s 1000 -n 32 -st 946684800 -et 1262303999 -b 0
+python3 Parquet_OPS.py queryWorkload -t UNARY_SEQ -o 64000 -s 1000 -n 32 -st 946684800 -et 1262303999 -b 0
+...
+```
+
+* UNARY QUERY - RAND (Same cmd for all client nodes)
+```console
+python3 Parquet_OPS.py queryWorkload -t UNARY_RAND -o 0 -s 1000 -n 32 -st 946684800 -et 1262303999 -b 0
+```
+
+* BATCH QUERY - SEQ 
+```console
+python3 Parquet_OPS.py queryWorkload -t BATCH_SEQ -o 0 -s 1000 -n 32 -st 946684800 -et 1262303999 -b 10
+python3 Parquet_OPS.py queryWorkload -t BATCH_SEQ -o 320000 -s 1000 -n 32 -st 946684800 -et 1262303999 -b 10
+python3 Parquet_OPS.py queryWorkload -t BATCH_SEQ -o 640000 -s 1000 -n 32 -st 946684800 -et 1262303999 -b 10
+...
+```
+
+* BATCH QUERY - RAND (Same cmd for all client nodes)
+```console
+python3 Parquet_OPS.py queryWorkload -t BATCH_RAND -o 0 -s 1000 -n 32 -st 946684800 -et 1262303999 -b 10
+```
+
+* UNARY INSERT - SEQ
+```console
+python3 Parquet_OPS.py insertWorkload -t UNARY_SEQ -o 0 -s 1000 -n 32 -i hashData.parquet -b 0
+python3 Parquet_OPS.py insertWorkload -t UNARY_SEQ -o 32000 -s 1000 -n 32 -i hashData.parquet -b 0
+python3 Parquet_OPS.py insertWorkload -t UNARY_SEQ -o 64000 -s 1000 -n 32 -i hashData.parquet -b 0
+...
+```
+
+* UNARY INSERT - RAND (Same cmd for all client nodes)
+```console
+python3 Parquet_OPS.py insertWorkload -t UNARY_RAND -o 0 -s 1000 -n 32 -i hashData.parquet -b 0
+```
+
+* BATCH INSERT - SEQ
+```console
+python3 Parquet_OPS.py insertWorkload -t BATCH_SEQ -o 0 -s 1000 -n 32 -i hashData.parquet -b 10
+python3 Parquet_OPS.py insertWorkload -t BATCH_SEQ -o 320000 -s 1000 -n 32 -i hashData.parquet -b 10
+python3 Parquet_OPS.py insertWorkload -t BATCH_SEQ -o 640000 -s 1000 -n 32 -i hashData.parquet -b 10
+...
+```
+
+* BATCH INSERT - RAND (Same cmd for all client nodes)
+```console
+python3 Parquet_OPS.py insertWorkload -t BATCH_RAND -o 0 -s 1000 -n 32 -i hashData.parquet -b 10
+```
+
 </details>

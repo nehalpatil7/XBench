@@ -170,7 +170,7 @@ class ParquetOPS:
                 insertResult = mongoCollection.insert_many(dataList)
 
                 if insertResult.acknowledged == True:
-                    print(f"Inserted {batchSize} into DB")
+                    print(f"Inserted {batchSize:,.2f} into DB")
                 else:
                     print(f"Error on inserted into DB")
                     exit(1)
