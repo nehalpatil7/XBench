@@ -36,12 +36,26 @@ elif [ "$DB_NAME" == "InfluxDB" ]; then
     tmux send-keys -t "RestoreDB" "wget -qO- ${defaultURL} | tar xvS --zstd && influxd restore -portable InfluxDB_BENCH_DB && sudo rm -r InfluxDB_BENCH_DB && tmux kill-server" C-m
 
 elif [ "$DB_NAME" == "TimescaleDB" ]; then
-    # Drop and recreate the database using the 'postgres' user
-    dropdb --if-exists -p 9493 -U postgres bench_db
-    createdb -p 9493 -U postgres bench_db
+    # Stop PostgreSQL service
+    sudo systemctl stop postgresql@14-main
 
-    # Fetch experiment data and restore using pg_restore as 'postgres' user
-    # Assumes the .tar.zst contains a single pg_dump custom format file
-    tmux send-keys -t "RestoreDB" "wget -qO- ${defaultURL} | tar xvSO --zstd | pg_restore -p 9493 -U postgres --no-owner --no-privileges -d bench_db && tmux kill-server" C-m
+    # Clean up existing PostgreSQL data directory
+    sudo rm -rf /NVME_RAID-0/postgresql
 
+    mkdir -p backups
+    mkdir -p /NVME_RAID-0/postgresql
+    mkdir -p /NVME_RAID-0/postgresql/pg_wal
+
+    # Download and extract the backup
+    tmux send-keys -t "RestoreDB" "wget -qO- ${defaultURL} | tar -I zstd -xvf - -C backups && \
+    tar -xzf backups/base.tar.gz -C /NVME_RAID-0/postgresql && \
+    tar -xzf backups/pg_wal.tar.gz -C /NVME_RAID-0/postgresql/pg_wal && \
+    cp backups/backup_manifest /NVME_RAID-0/postgresql/ && \
+    /usr/lib/postgresql/14/bin/pg_verifybackup backups && \
+    sudo chown -R postgres:postgres /NVME_RAID-0/postgresql && \
+    sudo chmod 700 /NVME_RAID-0/postgresql && \
+    sudo chmod 700 /NVME_RAID-0/postgresql/pg_wal && \
+    sudo systemctl start postgresql@14-main && \
+    rm -rf backups && \
+    tmux kill-server" C-m
 fi
