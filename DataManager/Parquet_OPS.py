@@ -93,7 +93,7 @@ class ParquetOPS:
                 toWrite = pd.concat([toWrite, tempDF.loc[[item]]])
         return toWrite.reset_index(drop=True)
 
-    def genData(self, startTime, endTime, columnCount, outfileName, hashData=False):
+    def genData(self, startTime, endTime, columnCount, outfileName, block=False, hashData=False):
         # Check if there's an existing data file
         if os.path.isfile(outfileName):
             print(f'[ERROR - GEN DATA] -- {outfileName} is already existed')
@@ -107,28 +107,55 @@ class ParquetOPS:
         data = []
 
         if hashData:
-            for timeIdx in range(startTime, endTime + 1):
-                temp = []
-                # First column will always be timestamp
-                temp.append(timeIdx)
+            if block:
+                # 10 minute gap between blocks - BTC block time
+                for timeIdx in range(startTime, endTime + 1, 600):
+                    temp = []
+                    # First column will always be timestamp
+                    temp.append(timeIdx)
 
-                # Create hash data for each column
-                for i in range(columnCount):
-                    temp.append(hashlib.md5(f'{timeIdx}-{i}'.encode()).hexdigest())
+                    # Create hash data for each column
+                    for i in range(columnCount):
+                        temp.append(hashlib.shake_256(f'{timeIdx}-{i}'.encode()).hexdigest(128))
 
-                # Append to master list
-                data.append(temp)
+                    # Append to master list
+                    data.append(temp)
 
-                # Dumps to CSV every 1M rows
-                if len(data) == 1_000_000:
-                    df = pd.DataFrame(data, columns=columnLabels)
-                    if not os.path.isfile(outfileName):
-                        df.to_parquet(outfileName, engine='fastparquet', compression='zstd')
-                    else:
-                        df.to_parquet(outfileName, engine='fastparquet', compression='zstd', append=True)
+                    # Dumps to CSV every 10K rows
+                    if len(data) == 10_000:
+                        df = pd.DataFrame(data, columns=columnLabels)
+                        if not os.path.isfile(outfileName):
+                            df.to_parquet(outfileName, engine='fastparquet', compression='zstd')
+                        else:
+                            df.to_parquet(outfileName, engine='fastparquet', compression='zstd', append=True)
 
-                    # Reset master list
-                    data = []
+                        # Reset master list
+                        data = []
+
+            else:
+                for timeIdx in range(startTime, endTime + 1):
+                    temp = []
+                    # First column will always be timestamp
+                    temp.append(timeIdx)
+
+                    # Create hash data for each column
+                    for i in range(columnCount):
+                        temp.append(hashlib.md5(f'{timeIdx}-{i}'.encode()).hexdigest())
+
+                    # Append to master list
+                    data.append(temp)
+
+                    # Dumps to CSV every 1M rows
+                    if len(data) == 1_000_000:
+                        df = pd.DataFrame(data, columns=columnLabels)
+                        if not os.path.isfile(outfileName):
+                            df.to_parquet(outfileName, engine='fastparquet', compression='zstd')
+                        else:
+                            df.to_parquet(outfileName, engine='fastparquet', compression='zstd', append=True)
+
+                        # Reset master list
+                        data = []
+
         else:
             for timeIdx in range(startTime, endTime + 1):
                 temp = []
@@ -445,6 +472,7 @@ if __name__ == '__main__':
     dataGenerator.add_argument('-e', '--end-time', type=int, required=True, help='End time in Epoch time format (inclusive)')
     dataGenerator.add_argument('-c', '--column-count', type=int, required=True, help='Number of columns')
     dataGenerator.add_argument('-o', '--outfile_name', type=str, required=True, help='Name of the generated Parquet data file (With .parquet extension)')
+    dataGenerator.add_argument('-b', '--block', action='store_true', help='Blockchain block type data generation')
 
     # Data preparer
     #   READ workload
@@ -498,10 +526,11 @@ if __name__ == '__main__':
     # HANDLE data generator
     if args.command == 'generate':
         if args.data_type == "hash":
-            parquetOps.genData(args.start_time, args.end_time, args.column_count, args.outfile_name, True)
+            parquetOps.genData(args.start_time, args.end_time, args.column_count, args.outfile_name, args.block, True)
         else:
-            parquetOps.genData(args.start_time, args.end_time, args.column_count, args.outfile_name, False)
+            parquetOps.genData(args.start_time, args.end_time, args.column_count, args.outfile_name, args.block, False)
 
+    # Bulk data ingestor
     elif args.command == 'ingestAll':
         parquetOps.ingestAll(db_name=args.db_name, ip_address=args.ip_address, port_number=args.port_number, batchSize=args.batch_size, filename=args.file_name)
 

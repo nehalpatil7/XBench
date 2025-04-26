@@ -1,4 +1,4 @@
-xbench_env/
+.venv/
 build/
 test.py
 scripts/__pycache__/
