@@ -350,6 +350,98 @@ class XStore_Client {
             returnData->ParseFromArray(recv_msgs.back().data(), recv_msgs.back().size());
         }
 
+        void aggMin(unsigned long int startTime, unsigned long int endTime, std::string targetDBName, unsigned short int columnIdx, XStore_Proto::min_REP *returnData) {
+            XStore_Proto::min_REQ toServer;
+            toServer.set_rtype(XStore_Proto::MIN);
+            toServer.set_starttime(startTime);
+            toServer.set_endtime(endTime);
+            toServer.set_dbname(targetDBName);
+            toServer.set_columnidx(columnIdx);
+
+            // Config msg and send
+            size_t byteSize = toServer.ByteSizeLong();
+            zmq::message_t z_out(byteSize);
+            toServer.SerializeToArray(z_out.data(), byteSize);
+            sock.send(z_out, zmq::send_flags::dontwait);
+
+            // RECEIVING
+            std::vector<zmq::message_t> recv_msgs;
+            zmq::message_t zFromServer;
+            zmq::recv_multipart(sock, std::back_inserter(recv_msgs));
+
+            // Query data
+            returnData->ParseFromArray(recv_msgs.back().data(), recv_msgs.back().size());
+        }
+
+        void aggMax(unsigned long int startTime, unsigned long int endTime, std::string targetDBName, unsigned short int columnIdx, XStore_Proto::max_REP *returnData) {
+            XStore_Proto::max_REQ toServer;
+            toServer.set_rtype(XStore_Proto::MAX);
+            toServer.set_starttime(startTime);
+            toServer.set_endtime(endTime);
+            toServer.set_dbname(targetDBName);
+            toServer.set_columnidx(columnIdx);
+
+            // Config msg and send
+            size_t byteSize = toServer.ByteSizeLong();
+            zmq::message_t z_out(byteSize);
+            toServer.SerializeToArray(z_out.data(), byteSize);
+            sock.send(z_out, zmq::send_flags::dontwait);
+
+            // RECEIVING
+            std::vector<zmq::message_t> recv_msgs;
+            zmq::message_t zFromServer;
+            zmq::recv_multipart(sock, std::back_inserter(recv_msgs));
+
+            // Query data
+            returnData->ParseFromArray(recv_msgs.back().data(), recv_msgs.back().size());
+        }
+
+        void aggSum(unsigned long int startTime, unsigned long int endTime, std::string targetDBName, unsigned short int columnIdx, XStore_Proto::sum_REP *returnData) {
+            XStore_Proto::sum_REQ toServer;
+            toServer.set_rtype(XStore_Proto::SUM);
+            toServer.set_starttime(startTime);
+            toServer.set_endtime(endTime);
+            toServer.set_dbname(targetDBName);
+            toServer.set_columnidx(columnIdx);
+
+            // Config msg and send
+            size_t byteSize = toServer.ByteSizeLong();
+            zmq::message_t z_out(byteSize);
+            toServer.SerializeToArray(z_out.data(), byteSize);
+            sock.send(z_out, zmq::send_flags::dontwait);
+
+            // RECEIVING
+            std::vector<zmq::message_t> recv_msgs;
+            zmq::message_t zFromServer;
+            zmq::recv_multipart(sock, std::back_inserter(recv_msgs));
+
+            // Query data
+            returnData->ParseFromArray(recv_msgs.back().data(), recv_msgs.back().size());
+        }
+
+        void aggAvg(unsigned long int startTime, unsigned long int endTime, std::string targetDBName, unsigned short int columnIdx, XStore_Proto::avg_REP *returnData) {
+            XStore_Proto::avg_REQ toServer;
+            toServer.set_rtype(XStore_Proto::AVG);
+            toServer.set_starttime(startTime);
+            toServer.set_endtime(endTime);
+            toServer.set_dbname(targetDBName);
+            toServer.set_columnidx(columnIdx);
+
+            // Config msg and send
+            size_t byteSize = toServer.ByteSizeLong();
+            zmq::message_t z_out(byteSize);
+            toServer.SerializeToArray(z_out.data(), byteSize);
+            sock.send(z_out, zmq::send_flags::dontwait);
+
+            // RECEIVING
+            std::vector<zmq::message_t> recv_msgs;
+            zmq::message_t zFromServer;
+            zmq::recv_multipart(sock, std::back_inserter(recv_msgs));
+
+            // Query data
+            returnData->ParseFromArray(recv_msgs.back().data(), recv_msgs.back().size());
+        }
+
         XStore_Proto::removeDB_REP removeDB(std::string dbName) {
             XStore_Proto::removeDB_REQ toServer;
             toServer.set_rtype(XStore_Proto::REMOVEDB);

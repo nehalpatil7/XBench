@@ -562,3 +562,63 @@ std::vector<std::vector<std::vector<std::any>>> DataManager::readInsertWorkload(
     }
     return toReturn;
 }
+
+std::vector<std::vector<std::vector<std::any>>> DataManager::readAggQueryWorkload(std::string nameBeginsWith, unsigned int nThreads, unsigned int nIterations, unsigned int bIterations) {
+    // Containing all data for all threads
+    std::vector<std::vector<std::vector<std::any>>> toReturn;
+    std::vector<std::vector<std::any>> tempVector;
+
+    // Get list of files
+    std::vector<std::string> targetFileNames = listFiles(nameBeginsWith);
+
+    // Sort list of filename ASC
+    std::sort(targetFileNames.begin(), targetFileNames.end(), std::less<>());
+
+    // Check if files match bench criteria
+    //  Expecting nThreads == N number of files
+    if (targetFileNames.size() < nThreads) {
+        spdlog::error("[READ AGG QUERY WORKLOAD] - Insufficient test dataset");
+        exit(1);
+    }
+
+    //  Expecting correct sample size
+    unsigned int parsedSampleSize, parsedBatchIter;
+    std::string toParse;
+    for (int i = 0; i < nThreads; i++) {
+        // File name
+        std::string currFile = targetFileNames.at(i);
+
+        // Parse embedded sample size from filename with filter
+        toParse = splitByDelim(currFile, "_").at(2);
+        parsedSampleSize = std::stoul(splitByDelim(toParse, "-").at(1));
+        parsedBatchIter = std::stoul(splitByDelim(toParse, "-").at(0));
+
+        // Expecting nIterations == Parsed sample size
+        if (parsedSampleSize != nIterations) {
+            spdlog::error("[READ AGG QUERY WORKLOAD] - Unexpected sample size");
+            exit(1);
+        }
+
+        // Expecting bIterations == Parsed batch size
+        if (parsedBatchIter != bIterations) {
+            spdlog::error("[READ AGG QUERY WORKLOAD] - Unexpected batch iteration");
+            exit(1);
+        }
+    }
+
+    // Reading each parquet workload files
+    for (int i = 0; i < nThreads; i++) {
+        // File name
+        std::string currFile = targetFileNames.at(i);
+
+        // Read workload into temp vector
+        this->readParquet(currFile, &tempVector);
+
+        // Add to master vector
+        toReturn.emplace_back(tempVector);
+
+        // Clear temp vector
+        tempVector.clear();
+    }
+    return toReturn;
+}

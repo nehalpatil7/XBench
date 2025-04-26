@@ -51,6 +51,10 @@ public:
     //      RAND
     std::vector<std::vector<std::vector<std::any>>> readInsertWorkload(std::string nameBeginsWith, unsigned int nThreads, unsigned int nIterations, unsigned int bIterations);
 
+    //  Reading AGGREGATE workload
+    //      MIN/MAX/SUM/AVG
+    std::vector<std::vector<std::vector<std::any>>> readAggQueryWorkload(std::string nameBeginsWith, unsigned int nThreads, unsigned int nIterations, unsigned int bIterations);
+
 private:
     std::vector<std::vector<std::any>> generateHashData(unsigned long int startTime, unsigned long int endTime, int nColumns);
 

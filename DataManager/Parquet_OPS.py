@@ -136,8 +136,7 @@ class ParquetOPS:
                 temp.append(timeIdx)
 
                 # Create hash data for each column
-                for i in range(columnCount):
-                    temp.append(random.uniform(-9223372036854775808, 9223372036854775807))
+                temp += np.random.uniform(low=-999_999, high=999_999, size=columnCount).tolist()
 
                 # Append to master list
                 data.append(temp)
@@ -169,7 +168,7 @@ class ParquetOPS:
             xstoreClient = XStoreClient(ip_address, port_number)
 
             # Create DB
-            createDBStatus = xstoreClient.createDB("BENCH_DB", XStore_Proto.timeUnit.Value("SECOND"), 64)
+            createDBStatus = xstoreClient.createDB("BENCH_DB", XStore_Proto.timeUnit.Value("SECOND"), 1024+256)
             print(createDBStatus)
 
             for df in masterDF.iter_batches(batch_size=batchSize):
@@ -205,7 +204,7 @@ class ParquetOPS:
                 insertResult = mongoCollection.insert_many(dataList)
 
                 if insertResult.acknowledged == True:
-                    print(f"Inserted {batchSize} into DB")
+                    print(f"Inserted {batchSize:,.2f} into DB")
                 else:
                     print(f"Error on inserted into DB")
                     exit(1)
@@ -412,6 +411,28 @@ class ParquetOPS:
                 toWrite.to_parquet(fName, engine='fastparquet', compression='zstd')
                 print(f'File written: {fName}')
 
+    def createAggQuery(self, offset, sampleSize, nClients, startTime, endTime, startTargetColIdx, endTargetColIdx, queryType='AGG_MIN', batchIter=None):
+        # Batch size default
+        if batchIter is None:
+            batchIter = 10
+
+        if queryType in ['AGG_MIN', 'AGG_MAX', 'AGG_SUM', 'AGG_AVG']:
+            for i in range(nClients):
+                sTime = [random.randrange(startTime, endTime - (sampleSize * batchIter)) + (j * sampleSize) for j in range(batchIter)]
+                eTime = [j + sampleSize for j in sTime]
+                targetCols = [random.randint(startTargetColIdx, endTargetColIdx - 1) for _ in range(batchIter)]
+
+                # Prepare DF to write
+                toWrite = pd.DataFrame(zip(sTime, eTime, targetCols), columns=['startTime', 'endTime', 'targetCol'])
+                toWrite['startTime'] = toWrite['startTime'].astype(np.uint64)
+                toWrite['endTime'] = toWrite['endTime'].astype(np.uint64)
+                toWrite['targetCol'] = toWrite['targetCol'].astype(np.uint64)
+
+                # Write to file
+                fName = f'AGG-{queryType.split("_")[1]}-QUERY_Client-{i}_{batchIter}-{sampleSize}_{startTime}-{endTime}.parquet'
+                toWrite.to_parquet(fName, engine='fastparquet', compression='zstd')
+                print(f'File written: {fName}')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='XBench Data Utilities')
@@ -444,6 +465,18 @@ if __name__ == '__main__':
     writeWorkload.add_argument('-n', '--num-client', type=int, required=True, help='Number of client (Each client has its own input data file)')
     writeWorkload.add_argument('-i', '--input-data', type=str, required=True, help='Input parquet file')
     writeWorkload.add_argument('-b', '--batch-iter', type=int, required=False, help='Batch iteration (Only applicable to RANGE/BATCH workloads)')
+
+    #   AGGREGATE workload
+    aggWorkload = subParser.add_parser('aggWorkload', add_help=True, description='Data preparer for READ workloads')
+    aggWorkload.add_argument('-t', '--type', type=str, required=True, help='Workload type', choices=['AGG_MIN', 'AGG_MAX', 'AGG_SUM', 'AGG_AVG'])
+    aggWorkload.add_argument('-o', '--offset', type=int, required=True, help='Offset/Skip N timestamps')
+    aggWorkload.add_argument('-s', '--sample-size', type=int, required=True, help='Number of timestamps')
+    aggWorkload.add_argument('-n', '--num-client', type=int, required=True, help='Number of client (Each client has its own input data file)')
+    aggWorkload.add_argument('-st', '--start-time', type=int, required=True, help='Start range of epoch time')
+    aggWorkload.add_argument('-et', '--end-time', type=int, required=True, help='End range of epoch time')
+    aggWorkload.add_argument('-sc', '--start-column', type=int, required=True, help='Start range of column index')
+    aggWorkload.add_argument('-ec', '--end-column', type=int, required=True, help='End range of column index')
+    aggWorkload.add_argument('-b', '--batch-iter', type=int, required=False, help='Batch iteration')
 
     #   INGEST ALL
     ingestAll = subParser.add_parser('ingestAll', add_help=True, description='Data ingestor for benchmarking suite')
@@ -479,3 +512,7 @@ if __name__ == '__main__':
     # BASIC INSERTS
     elif args.command == 'insertWorkload':
         parquetOps.createBasicInsert(offset=args.offset, sampleSize=args.sample_size, nClients=args.num_client, inputFile=args.input_data, insertType=args.type, batchIter=args.batch_iter)
+
+    # AGGREGATE QUERIES
+    elif args.command == 'aggWorkload':
+        parquetOps.createAggQuery(offset=args.offset, sampleSize=args.sample_size, nClients=args.num_client, startTime=args.start_time, endTime=args.end_time, startTargetColIdx=args.start_column, endTargetColIdx=args.end_column, queryType=args.type, batchIter=args.batch_iter)

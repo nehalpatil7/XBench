@@ -134,6 +134,30 @@ std::vector<double> MongoDB_Adapter::batchInsert(std::string SERVER_ADDR, std::s
     return timeCost;
 }
 
+std::vector<double> MongoDB_Adapter::aggQuery(std::string SERVER_ADDR, std::string SERVER_PORT, short unsigned int NUM_THREAD, int N_ITERATION, std::vector<std::vector<std::vector<std::any>>> *queryData, std::string pattern, bool isDebug) {
+    BS::multi_future<std::vector<double>> multiFuture;
+    std::vector<std::vector<double>> nestedVector;
+
+    for (int i = 0; i < NUM_THREAD; i++) {
+        multiFuture.push_back(threadPool.submit(MongoDB_Adapter::aggQuery_singleThread, SERVER_ADDR, SERVER_PORT, N_ITERATION, &queryData->at(i), pattern, isDebug));
+    }
+
+    // Wait till all threads finishes
+    for (std::vector<double> i : multiFuture.get()) {
+        nestedVector.push_back(i);
+    }
+
+    std::vector<double> timeCost;
+
+    // Flattening nested vector
+    for (int i = 0; i < nestedVector.size(); i++) {
+        // Write experiment result to CSV
+        writeCSV(fmt::format("AGG-{}_Client-{}.csv", pattern, i), "Time taken (ms)", nestedVector.at(i));
+        std::move(nestedVector.at(i).begin(), nestedVector.at(i).end(), std::back_inserter(timeCost));
+    }
+    return timeCost;
+}
+
 std::vector<double> MongoDB_Adapter::unaryQuery_singleThread(std::string SERVER_ADDR, std::string SERVER_PORT, int N_ITERATION, std::vector<std::vector<std::any>> *queryData, bool isDebug) {
     std::vector<double> toReturn;
     bool timedOut = false;
@@ -168,8 +192,8 @@ std::vector<double> MongoDB_Adapter::unaryQuery_singleThread(std::string SERVER_
             }
 
             // Dispatch query
-            start = std::chrono::high_resolution_clock::now();
             try {
+                start = std::chrono::high_resolution_clock::now();
                 const core::optional<bsoncxx::document::value> &unaryQueryRep = mongoCollection.find_one(currDocument.view());
                 end = std::chrono::high_resolution_clock::now();
                 timeCost = end - start;
@@ -201,8 +225,8 @@ std::vector<double> MongoDB_Adapter::unaryQuery_singleThread(std::string SERVER_
             }
 
             // Dispatch query
-            start = std::chrono::high_resolution_clock::now();
             try {
+                start = std::chrono::high_resolution_clock::now();
                 const core::optional<bsoncxx::document::value> &unaryQueryRep = mongoCollection.find_one(currDocument.view());
                 end = std::chrono::high_resolution_clock::now();
                 timeCost = end - start;
@@ -255,8 +279,8 @@ std::vector<double> MongoDB_Adapter::rangeQuery_singleThread(std::string SERVER_
             }
 
             // Dispatch query
-            start = std::chrono::high_resolution_clock::now();
             try {
+                start = std::chrono::high_resolution_clock::now();
                 mongocxx::cursor cursor = mongoCollection.find(currDocument.view());
 
                 // Iterate all elements in cursor without doing anything
@@ -298,8 +322,8 @@ std::vector<double> MongoDB_Adapter::rangeQuery_singleThread(std::string SERVER_
             }
 
             // Dispatch query
-            start = std::chrono::high_resolution_clock::now();
             try {
+                start = std::chrono::high_resolution_clock::now();
                 mongocxx::cursor cursor = mongoCollection.find(currDocument.view());
 
                 // Iterate all elements in cursor without doing anything
@@ -354,8 +378,8 @@ std::vector<double> MongoDB_Adapter::batchQuery_singleThread(std::string SERVER_
             }
 
             // Dispatch query
-            start = std::chrono::high_resolution_clock::now();
             try {
+                start = std::chrono::high_resolution_clock::now();
                 mongocxx::cursor cursor = mongoCollection.find(currDocument.view());
 
                 // Iterate all elements in cursor without doing anything
@@ -395,8 +419,8 @@ std::vector<double> MongoDB_Adapter::batchQuery_singleThread(std::string SERVER_
             }
 
             // Dispatch query
-            start = std::chrono::high_resolution_clock::now();
             try {
+                start = std::chrono::high_resolution_clock::now();
                 mongocxx::cursor cursor = mongoCollection.find(currDocument.view());
 
                 // Iterate all elements in cursor without doing anything
@@ -446,8 +470,8 @@ std::vector<double> MongoDB_Adapter::unaryInsert_singleThread(std::string SERVER
             }
 
             // Dispatch insert
-            start = std::chrono::high_resolution_clock::now();
             try {
+                start = std::chrono::high_resolution_clock::now();
                 const core::optional<mongocxx::result::insert_one> &insertResult = mongoCollection.insert_one(currDocument.view(), insertOptions);
 
                 end = std::chrono::high_resolution_clock::now();
@@ -476,8 +500,8 @@ std::vector<double> MongoDB_Adapter::unaryInsert_singleThread(std::string SERVER
             }
 
             // Dispatch insert
-            start = std::chrono::high_resolution_clock::now();
             try {
+                start = std::chrono::high_resolution_clock::now();
                 const core::optional<mongocxx::result::insert_one> &insertResult = mongoCollection.insert_one(currDocument.view(), insertOptions);
 
                 end = std::chrono::high_resolution_clock::now();
@@ -528,8 +552,8 @@ std::vector<double> MongoDB_Adapter::batchInsert_singleThread(std::string SERVER
             }
 
             // Dispatch insert
-            start = std::chrono::high_resolution_clock::now();
             try {
+                start = std::chrono::high_resolution_clock::now();
                 const core::optional<mongocxx::result::insert_many> &insertResult = mongoCollection.insert_many(currDocuments, insertOptions);
 
                 end = std::chrono::high_resolution_clock::now();
@@ -563,10 +587,145 @@ std::vector<double> MongoDB_Adapter::batchInsert_singleThread(std::string SERVER
             }
 
             // Dispatch insert
-            start = std::chrono::high_resolution_clock::now();
             try {
+                start = std::chrono::high_resolution_clock::now();
                 const core::optional<mongocxx::result::insert_many> &insertResult = mongoCollection.insert_many(currDocuments, insertOptions);
 
+                end = std::chrono::high_resolution_clock::now();
+                timeCost = end - start;
+                toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
+            }
+            catch (...) {
+                toReturn.push_back(0);
+                timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
+            }
+        }
+    }
+    return toReturn;
+}
+
+std::vector<double> MongoDB_Adapter::aggQuery_singleThread(std::string SERVER_ADDR, std::string SERVER_PORT, int N_ITERATION, std::vector<std::vector<std::any>> *queryData, std::string aggType, bool isDebug) {
+    std::vector<double> toReturn;
+    bool timedOut = false;
+    std::string aggTypeUpperCase = aggType;
+    toUpperCase(aggTypeUpperCase.begin(), aggTypeUpperCase.end());
+
+    // Init MongoDB instances
+    mongocxx::uri uri(fmt::format("mongodb://{}:{}/?socketTimeoutMS=120000", SERVER_ADDR, SERVER_PORT));
+    mongocxx::client mongoClient(uri);
+
+    // Access DB and collection
+    const mongocxx::database mongoDB = mongoClient["BENCH_DB"];
+    mongocxx::collection mongoCollection = mongoDB["BENCH_DB"];
+
+    // Clock init
+    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+    std::chrono::duration<double> timeCost;
+
+    // Query target time
+    unsigned long int queryStartTime, queryEndTime, queryTargetColumn;
+
+    // DEBUG mode
+    if (isDebug) {
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+            queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
+            queryTargetColumn = std::any_cast<unsigned long int>(queryData->at(i).at(2));
+
+            // Build aggregation pipeline
+            mongocxx::pipeline p{};
+            p.match(
+                bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp("timestamp",
+                         bsoncxx::builder::basic::make_document(
+                             bsoncxx::builder::basic::kvp("$gte", bsoncxx::types::b_date(std::chrono::seconds(queryStartTime))),
+                             bsoncxx::builder::basic::kvp("$lte", bsoncxx::types::b_date(std::chrono::seconds(queryEndTime)))
+                         )
+                    )
+                )
+            );
+            p.group(bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp("_id", 0),
+                    bsoncxx::builder::basic::kvp(fmt::format("{}Value", aggType),
+                        bsoncxx::builder::basic::make_document(
+                            bsoncxx::builder::basic::kvp(fmt::format("${}", aggType), fmt::format("$col{}", queryTargetColumn))
+                        )
+                    )
+            ));
+
+            if (timedOut) {
+                spdlog::warn("[AGG {}] - There was an exception or operation has timed-out", aggTypeUpperCase);
+                toReturn.push_back(0);
+                continue;
+            }
+
+            // Dispatch query
+            try {
+                start = std::chrono::high_resolution_clock::now();
+                mongocxx::cursor cursor = mongoCollection.aggregate(p);
+
+                // Iterate all elements in cursor without doing anything
+                //  This is because of lazy execution of cursor
+                std::vector<std::string> docVector;
+                for (bsoncxx::document::view currDoc : cursor) {
+                    docVector.push_back(bsoncxx::to_json(currDoc));
+                }
+
+                end = std::chrono::high_resolution_clock::now();
+                timeCost = end - start;
+                toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());
+
+                // Debug
+                spdlog::debug("[AGG {}] - From: {} to {} | Aggregate Result: {}", aggTypeUpperCase, queryStartTime, queryEndTime, fmt::join(docVector, "\n"));
+            }
+            catch (...) {
+                spdlog::warn("[AGG {}] - There was an exception or operation has timed-out", aggTypeUpperCase);
+                toReturn.push_back(0);
+                timedOut = true;        // Once 1 op is timed-out, the rest will also timed-out
+            }
+        }
+    }
+    // NOT a debug mode
+    else {
+        for (int i = 0; i < N_ITERATION; i++) {
+            queryStartTime = std::any_cast<unsigned long int>(queryData->at(i).at(0));
+            queryEndTime = std::any_cast<unsigned long int>(queryData->at(i).at(1));
+            queryTargetColumn = std::any_cast<unsigned long int>(queryData->at(i).at(2));
+
+            // Build aggregation pipeline
+            mongocxx::pipeline p{};
+            p.match(
+                bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp("timestamp",
+                        bsoncxx::builder::basic::make_document(
+                            bsoncxx::builder::basic::kvp("$gte", bsoncxx::types::b_date(std::chrono::seconds(queryStartTime))),
+                            bsoncxx::builder::basic::kvp("$lte", bsoncxx::types::b_date(std::chrono::seconds(queryEndTime)))
+                        )
+                    )
+                )
+            );
+            p.group(bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp("_id", 0),
+                    bsoncxx::builder::basic::kvp(fmt::format("{}Value", aggType),
+                        bsoncxx::builder::basic::make_document(
+                            bsoncxx::builder::basic::kvp(fmt::format("${}", aggType), fmt::format("$col{}", queryTargetColumn))
+                    )
+                )
+            ));
+
+            if (timedOut) {
+                toReturn.push_back(0);
+                continue;
+            }
+
+            // Dispatch query
+            try {
+                start = std::chrono::high_resolution_clock::now();
+                mongocxx::cursor cursor = mongoCollection.aggregate(p);
+
+                // Iterate all elements in cursor without doing anything
+                //  This is because of lazy execution of cursor
+                for (bsoncxx::document::view currDoc : cursor) { }
                 end = std::chrono::high_resolution_clock::now();
                 timeCost = end - start;
                 toReturn.push_back(std::chrono::duration<double, std::milli> (timeCost).count());

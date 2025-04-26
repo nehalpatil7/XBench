@@ -17,7 +17,7 @@ int main(int argc, char const *argv[])
     unsigned short int flushInterval = 10;
     Logger logger = Logger(CONSOLE_LEVEL, FILE_LEVEL, flushInterval);
 
-    argparse::ArgumentParser program("X-Bench");
+    argparse::ArgumentParser program("XBench");
 
     // ---- Benchmark runner (QUERY)
     argparse::ArgumentParser queryBench("queryBench");
@@ -69,6 +69,58 @@ int main(int argc, char const *argv[])
             .scan<'i', unsigned long int>();
 
     queryBench.add_argument("--debug").help("Debug mode")
+            .default_value(false).implicit_value(true);
+
+    // ---- Benchmark runner (AGGREGATE)
+    argparse::ArgumentParser aggBench("aggBench");
+    aggBench.add_description("XBench – CRUD Benchmarking Suites for Time-Series database (AGGREGATE)");
+
+    //  Server IP address
+    aggBench.add_argument("-i", "--ip_address").required()
+            .help("IP address of target DB server")
+            .default_value("127.0.0.1").nargs(1);
+
+    //  Server Port number
+    aggBench.add_argument("-p", "--port_number").required()
+            .help("Port number of target DB server")
+            .default_value("12345").nargs(1);
+
+    //  Target DB
+    aggBench.add_argument("-d", "--db_name").required()
+            .help("Target DB Name")
+            .default_value("XSTORE").nargs(1)
+            .choices("XSTORE", "MONGODB", "INFLUXDB");
+
+    //  Number of Threads
+    aggBench.add_argument("-t", "--thread_count").required()
+            .help("Number of client thread")
+            .default_value(1).nargs(1)
+            .scan<'i', unsigned short int>();
+
+    //  Type of Experiment
+    aggBench.add_argument("-e", "--experiment_type").required()
+            .help("Experiment type")
+            .default_value("MIN").nargs(1)
+            .choices("MIN", "MAX", "SUM", "AVG");
+
+    //  Number of Iterations
+    aggBench.add_argument("-n", "--n_iteration").required()
+            .help("Number of iterations")
+            .default_value(1).nargs(1)
+            .scan<'i', unsigned int>();
+
+    //  Number of Batch Iterations
+    aggBench.add_argument("-b", "--batch_iteration")
+            .help("Number of batch iterations (Only applicable to RANGE/BATCH workloads)")
+            .default_value(10).nargs(1)
+            .scan<'i', unsigned int>();
+
+    aggBench.add_argument("-ia", "--invoke_at").required()
+            .help("Invoke benchmark at specific time (epoch time)")
+            .default_value(0).nargs(1)
+            .scan<'i', unsigned long int>();
+
+    aggBench.add_argument("--debug").help("Debug mode")
             .default_value(false).implicit_value(true);
 
     // ---- Benchmark runner (INSERT)
@@ -146,6 +198,7 @@ int main(int argc, char const *argv[])
             .scan<'i', unsigned int>();
 
     program.add_subparser(queryBench);
+    program.add_subparser(aggBench);
     program.add_subparser(insertBench);
     program.add_subparser(protoBench);
 
@@ -294,6 +347,139 @@ int main(int argc, char const *argv[])
             }
             else if (TARGET_DB == "TIMESCALEDB") {
                 timeCost = TimescaleDB_Adapter::batchQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
+        }
+
+        // Display benchmark statistics
+        if (timeCost.size() > 0) {
+            printStatistics(timeCost);
+        }
+    }
+    else if (program.is_subcommand_used(aggBench)) {
+        std::string SERVER_ADDR = aggBench.get<std::string>("-i");
+        std::string SERVER_PORT = aggBench.get<std::string>("-p");
+        std::string TARGET_DB = aggBench.get<std::string>("-d");
+        toUpperCase(TARGET_DB.begin(), TARGET_DB.end());
+        std::string EXPERIMENT_TYPE = aggBench.get<std::string>("-e");
+        toUpperCase(EXPERIMENT_TYPE.begin(), EXPERIMENT_TYPE.end());
+        short unsigned int NUM_THREAD = aggBench.get<unsigned short int>("-t");
+        unsigned int N_ITERATIONS = aggBench.get<unsigned int>("-n");
+        unsigned int B_ITERATIONS = aggBench.get<unsigned int>("-b");
+        unsigned int INVOKE_AT = aggBench.get<unsigned long int>("-ia");
+        bool IS_DEBUG = aggBench.get<bool>("--debug");
+
+        // NUM_THREAD checking
+        short unsigned int availableHT = std::thread::hardware_concurrency();
+        if (NUM_THREAD < 1 || NUM_THREAD > availableHT) {
+            spdlog::error("[ARGUMENTS] - Invalid THREAD_COUNT. Expecting: 1 <= THREAD_COUNT <= {}", availableHT);
+            exit(1);
+        }
+
+        // Spawning Data Manager
+        DataManager dataManager;
+
+        // Benchmark data will be stored here
+        std::vector<double> timeCost;
+
+        if (EXPERIMENT_TYPE == "MIN") {
+            spdlog::info("[AGGREGATE QUERY]        Target DB: {}", TARGET_DB);
+            spdlog::info("[AGGREGATE QUERY]             Type: {}", EXPERIMENT_TYPE);
+            spdlog::info("[AGGREGATE QUERY]       Iterations: {}", N_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY] Batch Iterations: {}", B_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY]           Thread: {}", NUM_THREAD);
+            spdlog::info("[AGGREGATE QUERY]        Invoke at: {}", INVOKE_AT);
+            spdlog::info("[AGGREGATE QUERY]            Debug: {}", IS_DEBUG);
+
+            // Read data from parquet file
+            std::vector<std::vector<std::vector<std::any>>> queryWorkload = dataManager.readAggQueryWorkload("AGG-MIN-QUERY_Client-", NUM_THREAD, N_ITERATIONS, B_ITERATIONS);
+
+            // Poll till
+            epochPoller(INVOKE_AT);
+
+            if (TARGET_DB == "XSTORE") {
+                timeCost = XStore_Adapter::aggMin(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
+            else if (TARGET_DB == "MONGODB") {
+                timeCost = MongoDB_Adapter::aggQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, "min", IS_DEBUG);
+            }
+            else if (TARGET_DB == "INFLUXDB") {
+
+            }
+        }
+
+        if (EXPERIMENT_TYPE == "MAX") {
+            spdlog::info("[AGGREGATE QUERY]        Target DB: {}", TARGET_DB);
+            spdlog::info("[AGGREGATE QUERY]             Type: {}", EXPERIMENT_TYPE);
+            spdlog::info("[AGGREGATE QUERY]       Iterations: {}", N_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY] Batch Iterations: {}", B_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY]           Thread: {}", NUM_THREAD);
+            spdlog::info("[AGGREGATE QUERY]        Invoke at: {}", INVOKE_AT);
+            spdlog::info("[AGGREGATE QUERY]            Debug: {}", IS_DEBUG);
+
+            // Read data from parquet file
+            std::vector<std::vector<std::vector<std::any>>> queryWorkload = dataManager.readAggQueryWorkload("AGG-MAX-QUERY_Client-", NUM_THREAD, N_ITERATIONS, B_ITERATIONS);
+
+            // Poll till
+            epochPoller(INVOKE_AT);
+
+            if (TARGET_DB == "XSTORE") {
+                timeCost = XStore_Adapter::aggMax(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
+            else if (TARGET_DB == "MONGODB") {
+                timeCost = MongoDB_Adapter::aggQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, "max", IS_DEBUG);
+            }
+            else if (TARGET_DB == "INFLUXDB") {
+
+            }
+        }
+        else if (EXPERIMENT_TYPE == "SUM") {
+            spdlog::info("[AGGREGATE QUERY]        Target DB: {}", TARGET_DB);
+            spdlog::info("[AGGREGATE QUERY]             Type: {}", EXPERIMENT_TYPE);
+            spdlog::info("[AGGREGATE QUERY]       Iterations: {}", N_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY] Batch Iterations: {}", B_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY]           Thread: {}", NUM_THREAD);
+            spdlog::info("[AGGREGATE QUERY]        Invoke at: {}", INVOKE_AT);
+            spdlog::info("[AGGREGATE QUERY]            Debug: {}", IS_DEBUG);
+
+            // Read data from parquet file
+            std::vector<std::vector<std::vector<std::any>>> queryWorkload = dataManager.readAggQueryWorkload("AGG-SUM-QUERY_Client-", NUM_THREAD, N_ITERATIONS, B_ITERATIONS);
+
+            // Poll till
+            epochPoller(INVOKE_AT);
+
+            if (TARGET_DB == "XSTORE") {
+                timeCost = XStore_Adapter::aggSum(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
+            else if (TARGET_DB == "MONGODB") {
+                timeCost = MongoDB_Adapter::aggQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, "sum", IS_DEBUG);
+            }
+            else if (TARGET_DB == "INFLUXDB") {
+
+            }
+        }
+        else if (EXPERIMENT_TYPE == "AVG") {
+            spdlog::info("[AGGREGATE QUERY]        Target DB: {}", TARGET_DB);
+            spdlog::info("[AGGREGATE QUERY]             Type: {}", EXPERIMENT_TYPE);
+            spdlog::info("[AGGREGATE QUERY]       Iterations: {}", N_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY] Batch Iterations: {}", B_ITERATIONS);
+            spdlog::info("[AGGREGATE QUERY]           Thread: {}", NUM_THREAD);
+            spdlog::info("[AGGREGATE QUERY]        Invoke at: {}", INVOKE_AT);
+            spdlog::info("[AGGREGATE QUERY]            Debug: {}", IS_DEBUG);
+
+            // Read data from parquet file
+            std::vector<std::vector<std::vector<std::any>>> queryWorkload = dataManager.readAggQueryWorkload("AGG-AVG-QUERY_Client-", NUM_THREAD, N_ITERATIONS, B_ITERATIONS);
+
+            // Poll till
+            epochPoller(INVOKE_AT);
+
+            if (TARGET_DB == "XSTORE") {
+                timeCost = XStore_Adapter::aggAvg(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, EXPERIMENT_TYPE, IS_DEBUG);
+            }
+            else if (TARGET_DB == "MONGODB") {
+                timeCost = MongoDB_Adapter::aggQuery(SERVER_ADDR, SERVER_PORT, NUM_THREAD, B_ITERATIONS, &queryWorkload, "avg", IS_DEBUG);
+            }
+            else if (TARGET_DB == "INFLUXDB") {
+
             }
         }
 

@@ -13,7 +13,10 @@ sudo apt-get update && sudo apt-get install influxdb sysstat -y
 sudo service influxdb start
 
 # Change InfluxDB's default port to 9492 & bind to all interfaces
-sudo sed -i 's/# bind-address = ":8086"/bind-address= ":9492"/' /etc/influxdb/influxdb.conf
+sudo sed -i 's/# bind-address = ":8086"/bind-address = ":9492"/' /etc/influxdb/influxdb.conf
+
+# Disable limit on how much client can send data
+sudo sed -i 's/# max-body-size = 25000000/max-body-size = 0/' /etc/influxdb/influxdb.conf
 
 # Disable cached memory limit
 # sudo sed -i 's/# cache-max-memory-size = "1g"/cache-max-memory-size = 0/' /etc/influxdb/influxdb.conf
