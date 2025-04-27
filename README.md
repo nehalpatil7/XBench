@@ -109,14 +109,28 @@ sudo tar -I "zstd -T0 -19" -cSvf MongoDB_BENCH_DB.tar.zst MongoDB_BENCH_DB
 
 * MongoDB:
     ```console
-    mongodump --archive=BENCH_DB --db BENCH_DB --host 127.0.0.1 --port 9491
-    mongorestore --host 127.0.0.1 --port 9491 --nsInclude=BENCH_DB.BENCH_DB --archive --drop
+    > mongodump --archive=BENCH_DB --db BENCH_DB --host 127.0.0.1 --port 9491
+    > mongorestore --host 127.0.0.1 --port 9491 --nsInclude=BENCH_DB.BENCH_DB --archive --drop
     ```
 
 * InfluxDB:
     ```console
-    influxd backup -portable -db BENCH_DB -host 127.0.0.1:9492 InfluxDB_BENCH_DB
-    influxd restore -portable -db BENCH_DB -host 127.0.0.1:9492 InfluxDB_BENCH_DB
+    > influxd backup -portable -db BENCH_DB -host 127.0.0.1:9492 InfluxDB_BENCH_DB
+    > influxd restore -portable -db BENCH_DB -host 127.0.0.1:9492 InfluxDB_BENCH_DB
+    ```
+
+* TimescaleDB:
+    ```console
+    > pg_basebackup -h localhost -p 9493 -U postgres -F t -Z 5 -P --wal-method=stream -D 'timescaleDB_backup' && cd timescaleDB_backup && tar -cf - backup_manifest base.tar.gz pg_wal.tar.gz | pv | zstd -19 -T0 -o TimescaleDB_BENCH_DB.tar.zst && cd ..
+    > sudo systemctl stop postgresql@14-main && \
+        sudo rm -rf /NVME_RAID-0/postgresql && \
+        mkdir -p /NVME_RAID-0/postgresql/pg_wal && \
+        cp backups/backup_manifest /NVME_RAID-0/postgresql/ && \
+        tar -xzf backups/base.tar.gz -C /NVME_RAID-0/postgresql && \
+        tar -xzf backups/pg_wal.tar.gz -C /NVME_RAID-0/postgresql/pg_wal && \
+        sudo chown -R postgres:postgres /NVME_RAID-0/postgresql && \
+        sudo chmod 700 /NVME_RAID-0/postgresql && \
+        sudo systemctl start postgresql@14-main
     ```
 </details>
 
