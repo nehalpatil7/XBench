@@ -8,9 +8,9 @@ from fabric import Connection
 
 marker = itertools.cycle((">", "o", "s", "^", "v", "p", "P", "d", "*"))
 
-def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNodes, nIter, batchIter, serverGroup, serverWorkingDir, user="cc"):
+def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNodes, nIter, batchIter, serverGroup, serverWorkingDir, user="cc", block=False):
     # Running single client tests first (Thread: 1, 2, 4)
-    runWorkload_singleClient(EXPERIMENT_TYPE, [1, 2, 4], serverNode, serverPort, dbName, clientNodes[0], nIter, batchIter, serverGroup, serverWorkingDir, user)
+    runWorkload_singleClient(EXPERIMENT_TYPE, [1, 2, 4], serverNode, serverPort, dbName, clientNodes[0], nIter, batchIter, serverGroup, serverWorkingDir, user, block)
 
     WORKLOAD_TYPE = EXPERIMENT_TYPE.split("_")[0]
     EXPERIMENT_TYPE = EXPERIMENT_TYPE[len(WORKLOAD_TYPE) + 1:]
@@ -45,12 +45,13 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
             # SSH to client
             conn = Connection(ip, user=user)
 
+            block_flag = "-b " if block else ""
             if WORKLOAD_TYPE == "INSERT":
                 conn.put(f"../../scripts/insertBench.sh")
-                conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
+                conn.run(f"bash insertBench.sh {block_flag} {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
             elif WORKLOAD_TYPE == "QUERY":
                 conn.put(f"../../scripts/queryBench.sh")
-                conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
+                conn.run(f"bash queryBench.sh {block_flag} {EXPERIMENT_TYPE} {idx} {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
             conn.close()
             print(f"[Benchmark: {totalClients}] [Client: {ip}] - Time now: {int(time.time())} | Delta: {epochTime - int(time.time())}")
 
@@ -125,7 +126,7 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
                 time.sleep(5)
                 pass
 
-def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNode, nIter, batchIter, serverGroup, serverWorkingDir, user="cc"):
+def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNode, nIter, batchIter, serverGroup, serverWorkingDir, user="cc", block=False):
     WORKLOAD_TYPE = EXPERIMENT_TYPE.split("_")[0]
     EXPERIMENT_TYPE = EXPERIMENT_TYPE[len(WORKLOAD_TYPE) + 1:]
 
@@ -152,12 +153,13 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
         # SSH to client
         conn = Connection(clientNode, user=user)
 
+        block_flag = "-b " if block else ""
         if WORKLOAD_TYPE == "INSERT":
             conn.put(f"../../scripts/insertBench.sh")
-            conn.run(f"bash insertBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
+            conn.run(f"bash insertBench.sh {block_flag} {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
         elif WORKLOAD_TYPE == "QUERY":
             conn.put(f"../../scripts/queryBench.sh")
-            conn.run(f"bash queryBench.sh {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
+            conn.run(f"bash queryBench.sh {block_flag} {EXPERIMENT_TYPE} 0 {serverNode} {serverPort} {dbName.upper()} {numThread} {nIter} {batchIter} {epochTime}", hide=True)
         conn.close()
         print(f"[Benchmark: {numThread}] [Client: {clientNode}] - Time now: {int(time.time())} | Delta: {epochTime - int(time.time())}")
 
