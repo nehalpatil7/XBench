@@ -85,6 +85,9 @@ class ParquetOPS:
         toWrite = pd.DataFrame()
 
         for rowGroupIdx in segmentedIdxList.keys():
+            if rowGroupIdx is None:
+                print(f"Warning: targetIdx out of range, skipping.")
+                continue
             currIdxList = segmentedIdxList[rowGroupIdx]
             tempDF = self.df[rowGroupIdx].to_pandas()
             tempDF = tempDF.set_index(np.int64(tempDF.index + (self.rowsPerGroup * rowGroupIdx)))

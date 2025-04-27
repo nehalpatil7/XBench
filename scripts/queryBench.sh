@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Parse command line arguments
 BLOCK=false
 while getopts "b" opt; do
@@ -12,7 +14,6 @@ if [ "$BLOCK" = true ]; then
 else
     SOURCE_DIR="10Y_32-Cols_Experiments"
 fi
-
 
 EXPERIMENT_TYPE="$1"
 NODE_NUM="$2"
