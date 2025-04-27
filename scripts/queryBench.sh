@@ -1,3 +1,19 @@
+# Parse command line arguments
+BLOCK=false
+while getopts "b" opt; do
+  case $opt in
+    b) BLOCK=true ;;
+    \?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
+  esac
+done
+
+if [ "$BLOCK" = true ]; then
+    SOURCE_DIR="1D_451-Cols_Experiments"
+else
+    SOURCE_DIR="10Y_32-Cols_Experiments"
+fi
+
+
 EXPERIMENT_TYPE="$1"
 NODE_NUM="$2"
 SERVER_ADDR="$3"
@@ -27,7 +43,7 @@ rm -f *.csv *.parquet && sleep 5
 free > /dev/null && sync > /dev/null && sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches' && free > /dev/null
 
 # Copy data to home directory
-cp -r 10Y_32-Cols_Experiments/$WORKLOAD\_QUERY_$PATTERN/$WORKLOAD\_QUERY_$PATTERN\_Node-$NODE_NUM/BASIC-QUERY-$WORKLOAD-$PATTERN\_Client-* .
+cp -r $SOURCE_DIR/$WORKLOAD\_QUERY_$PATTERN/$WORKLOAD\_QUERY_$PATTERN\_Node-$NODE_NUM/BASIC-QUERY-$WORKLOAD-$PATTERN\_Client-* .
 
 # Init tmux session
 tmux new-session -d -s $DB_NAME -n Client
