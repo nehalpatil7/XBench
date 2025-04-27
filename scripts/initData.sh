@@ -1,4 +1,20 @@
-FILE_NAME="10Y_32-Cols_Experiments.tar.zst"
+#!/bin/bash
+
+# Parse command line arguments
+BLOCK=false
+while getopts "b" opt; do
+  case $opt in
+    b) BLOCK=true ;;
+    \?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
+  esac
+done
+
+if [ "$BLOCK" = true ]; then
+    FILE_NAME="1D_451-Cols_Experiments.tar.zst"
+else
+    FILE_NAME="10Y_32-Cols_Experiments.tar.zst"
+fi
+
 FOLDER_NAME=${FILE_NAME%.tar.zst}
 
 # Preemptively remove old stuffs
