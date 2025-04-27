@@ -21,7 +21,7 @@ FOLDER_NAME=${FILE_NAME%.tar.zst}
 rm -rf ${FOLDER_NAME} ${FILE_NAME}*
 
 # Fetch experiment data from ObjectStore
-wget -q https://chi.uc.chameleoncloud.org:7480/swift/v1/AUTH_e3c8a3b3b5a74e09b10957e3ad358e11/XStore_ExperimentDataset/${FILE_NAME}
+wget -q https://chi.uc.chameleoncloud.org:7480/swift/v1/AUTH_8d36e613c7d54f5bbbae886fb06d45e7/XStore_ExperimentDataset/${FILE_NAME}
 
 # Deflate compressed dataset
 tar -xvSf ${FILE_NAME} && rm ${FILE_NAME}
