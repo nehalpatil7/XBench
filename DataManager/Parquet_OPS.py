@@ -30,8 +30,8 @@ def ingest_row_group_pg(args):
     idx, filename, db_config = args
 
     parquet_file = pq.ParquetFile(filename)
-    table = parquet_file.read_row_group(idx)
-    df = table.to_pandas()
+    df = parquet_file.read_row_group(idx).to_pandas()
+    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
 
     total_rows = len(df)
     batch_size = max(1, total_rows // 2)
