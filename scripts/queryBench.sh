@@ -10,6 +10,7 @@ N_ITER="$7"
 BATCH_ITER="$8"
 INVOKE_AT="$9"
 DEBUG="$10"
+SOURCE_DIR="10Y_32-Cols_Experiments"
 
 # Parsed EXPERIMENT_TYPE
 WORKLOAD=$(echo $EXPERIMENT_TYPE | cut -d '_' -f 1)
