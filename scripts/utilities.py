@@ -332,7 +332,12 @@ def batchPlots(WORKLOAD_TYPE, DB_NAME, targetThreads, clientNodes, batchSize=100
 
     bar1 = ax.bar([f'{i.split("-")[-1]}' for i in df.columns], aggThroughput, color=colors)
 
-    ax.set_yticklabels([f'{str(int(label))[0:-3] + "K"}' for label in ax.get_yticks().tolist()])
+    def format_k(x, p):
+        if x >= 1000:
+            return f'{int(x/1000)}K'
+        return str(int(x))
+
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(format_k))
 
     ax.set_title(f'Aggregated Mean Throughput – ({WORKLOAD_TYPE})')
     ax.set_ylabel('Rows per Second')
