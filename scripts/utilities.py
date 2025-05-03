@@ -4,13 +4,13 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-from fabric import Connection
+from fabric import Connection, ThreadingGroup
 
 marker = itertools.cycle((">", "o", "s", "^", "v", "p", "P", "d", "*"))
 
-def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNodes, nIter, batchIter, serverGroup, serverWorkingDir, user="cc"):
+def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNodes, nIter, batchIter, serverGroup, serverWorkingDir, user="cc", gateway=None):
     # Running single client tests first (Thread: 1, 2, 4)
-    runWorkload_singleClient(EXPERIMENT_TYPE, [1, 2, 4], serverNode, serverPort, dbName, clientNodes[0], nIter, batchIter, serverGroup, serverWorkingDir, user)
+    runWorkload_singleClient(EXPERIMENT_TYPE, [1, 2, 4], serverNode, serverPort, dbName, clientNodes[0], nIter, batchIter, serverGroup, serverWorkingDir, user, gateway)
 
     WORKLOAD_TYPE = EXPERIMENT_TYPE.split("_")[0]
     EXPERIMENT_TYPE = EXPERIMENT_TYPE[len(WORKLOAD_TYPE) + 1:]
@@ -43,7 +43,7 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
 
         for idx, ip in enumerate(clientNodes):
             # SSH to client
-            conn = Connection(ip, user=user)
+            conn = get_connection(ip, user, gateway)
 
             if WORKLOAD_TYPE == "INSERT":
                 conn.put(f"../../scripts/insertBench.sh")
@@ -72,7 +72,7 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
                 hasSysStats = False
                 for idx, ip in enumerate(clientNodes):
                     currPath = f"{dbName.upper()}_{WORKLOAD_TYPE}_{EXPERIMENT_TYPE}/Client-{totalClients}/Node-{idx}/"
-                    conn = Connection(ip, user=user)
+                    conn = get_connection(ip, user, gateway)
 
                     # Create dir if not exist
                     os.makedirs(currPath, exist_ok=True)
@@ -125,7 +125,7 @@ def runWorkload(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, 
                 time.sleep(5)
                 pass
 
-def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNode, nIter, batchIter, serverGroup, serverWorkingDir, user="cc"):
+def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverPort, dbName, clientNode, nIter, batchIter, serverGroup, serverWorkingDir, user="cc", gateway=None):
     WORKLOAD_TYPE = EXPERIMENT_TYPE.split("_")[0]
     EXPERIMENT_TYPE = EXPERIMENT_TYPE[len(WORKLOAD_TYPE) + 1:]
 
@@ -150,7 +150,7 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
         print(f"[Benchmark: {numThread}] - Schedule workload on {epochTime}")
 
         # SSH to client
-        conn = Connection(clientNode, user=user)
+        conn = get_connection(clientNode, user, gateway)
 
         if WORKLOAD_TYPE == "INSERT":
             conn.put(f"../../scripts/insertBench.sh")
@@ -175,7 +175,7 @@ def runWorkload_singleClient(EXPERIMENT_TYPE, targetThreads, serverNode, serverP
         # Fetch bench results to this notebook
         while True:
             currPath = f"{dbName.upper()}_{WORKLOAD_TYPE}_{EXPERIMENT_TYPE}/Client-{numThread}/Node-0/"
-            conn = Connection(clientNode, user=user)
+            conn = get_connection(clientNode, user, gateway)
             try:
                 # Create dir if not exist
                 os.makedirs(currPath, exist_ok=True)
@@ -378,3 +378,11 @@ def checkTmuxJobIsDone(connectionGroup, timeout=300):
             print(f"Error checking tmux status: {str(e)}")
             time.sleep(10)
             continue
+
+# Add a helper to create connections with gateway
+
+def get_connection(ip, user, gateway=None):
+    if gateway is not None:
+        return Connection(ip, user=user, gateway=gateway)
+    else:
+        return Connection(ip, user=user)
