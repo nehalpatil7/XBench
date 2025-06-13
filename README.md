@@ -24,8 +24,8 @@ Source code for project XBench and its related work.
 * [Installation Wiki]&#40;[installationWiKi](https://gitlab.com/lvn2007/XStore/-/wikis/installation)&#41;
 
 # How to Use
-* [XStore API]&#40;https://gitlab.com/lvn2007/XStore/-/wikis/api&#41;
-* [Data Structure]&#40;https://gitlab.com/lvn2007/XStore/-/wikis/Data%20Structure&#41;
+* [XStore API]&#40;[XBenchAPIs](https://gitlab.com/lvn2007/XStore/-/wikis/API);
+* [Data Structure]&#40;[XStoreDataStructures](https://gitlab.com/lvn2007/XStore/-/wikis/Data-Structure);
 
 
 [//]: # (This work has been published to:)
