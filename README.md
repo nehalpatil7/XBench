@@ -21,7 +21,7 @@ Source code for project XBench and its related work.
 > ./benchmarkClient {insertBench} -i {SERVER_IP | 127.0.0.1} -p 9493 -d {DB_NAME_ALL_CAPS} -t 1 -e {UNARY_SEQ} -n 1000 -b 0 -ia {current_timestamp + 10} --debug
 
 # How to Install
-* [Installation Wiki]&#40;https://gitlab.com/lvn2007/XStore/-/wikis/installation&#41;
+* [Installation Wiki]&#40;[installationWiKi](https://gitlab.com/lvn2007/XStore/-/wikis/installation)&#41;
 
 # How to Use
 * [XStore API]&#40;https://gitlab.com/lvn2007/XStore/-/wikis/api&#41;
